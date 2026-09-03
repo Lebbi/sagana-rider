@@ -55,6 +55,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/lodash.debounce": "^4.0.9",
+    "babel-preset-expo": "~54.0.12",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "patch-package": "^8.0.1",
