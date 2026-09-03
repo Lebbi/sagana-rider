@@ -16,15 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
-// Placeholder defaults — replaced by constants/FontTheme's defaultTextStyle /
-// defaultInputStyle when that file lands in Phase 2. The family strings match
-// the @expo-google-fonts/stack-sans-headline exports referenced there.
-const defaultTextStyle: TextStyle = {
-  fontFamily: "StackSansHeadline_400Regular",
-};
-const defaultInputStyle: TextStyle = {
-  fontFamily: "StackSansHeadline_400Regular",
-};
+import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
 
 /**
  * Apply a default text style to every `<Text>` instance in the app.
