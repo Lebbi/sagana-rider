@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "Sagana Rider",
+    "slug": "sagana-rider",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/branding/sagana-icon-logo.png",
+    "scheme": "saganarider",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.sagana.rider",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationWhenInUseUsageDescription": "Sagana Rider uses your location to navigate to farmer pickups and buyer deliveries.",
+        "NSCameraUsageDescription": "Sagana Rider uses the camera to take proof-of-pickup and delivery photos."
+      }
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#D7ECC1",
+      "barStyle": "dark-content",
+      "translucent": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/branding/sagana-icon-logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.sagana.rider",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/branding/sagana-icon-logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/branding/sagana-wordform-logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#D7ECC1"
+        }
+      ]
+    ],
+    "splash": {
+      "image": "./assets/branding/sagana-wordform-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#D7ECC1"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}

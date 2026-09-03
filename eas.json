@@ -1,0 +1,65 @@
+{
+  "cli": {
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "cache": {
+        "disabled": true
+      },
+      "env": {
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "preview",
+      "cache": {
+        "disabled": true
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://onlyfarms-backend-production.up.railway.app/api",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://onlyfarms-backend-production.up.railway.app/api",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+      },
+      "cache": {
+        "disabled": false
+      }
+    },
+    "google-play": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://onlyfarms-backend-production.up.railway.app/api",
+        "EAS_SKIP_AUTO_FINGERPRINT": "1"
+      },
+      "cache": {
+        "disabled": false
+      }
+    }
+  }
+}
