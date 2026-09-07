@@ -1,7 +1,7 @@
 /**
- * lib/riderOrdersApi.ts â€” Sagana Rider
+ * lib/riderOrdersApi.ts - Sagana Rider
  *
- * Rider order API client â€” fetching orders, accepting orders,
+ * Rider order API client - fetching orders, accepting orders,
  * updating delivery status, and broadcasting rider GPS location.
  *
  * All endpoints live on the Sagana backend (see API contract):
