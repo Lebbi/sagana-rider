@@ -12,7 +12,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Redirect, useRouter } from "expo-router";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -92,11 +92,11 @@ export default function RiderLoginScreen() {
   const [passwordError, setPasswordError] = useState("");
 
   const mountedRef = useRef(true);
-  useRef(() => {
+  useEffect(() => {
     return () => {
       mountedRef.current = false;
     };
-  });
+  }, []);
 
   // Already logged in → straight to rider home
   if (!loadingUser && user) {

@@ -37,7 +37,6 @@ export default function NativeMapView({
   const mapRef = useRef<MapView>(null);
   const colors = useColors();
   const [isLoading, setIsLoading] = useState(true);
-  const [hasError, setHasError] = useState(false);
 
   const region = {
     latitude: destination.latitude,
@@ -186,18 +185,6 @@ export default function NativeMapView({
           </Text>
         </View>
       )}
-
-      {hasError && (
-        <View style={styles.errorOverlay}>
-          <MaterialIcons name="cloud-off" size={40} color={colors.error} />
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            Map failed to load
-          </Text>
-          <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
-            Check your internet connection
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -269,19 +256,5 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontWeight: "600",
-  },
-  errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#FFFFFF",
-    gap: 8,
-  },
-  errorText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  errorSubtext: {
-    fontSize: 12,
   },
 });

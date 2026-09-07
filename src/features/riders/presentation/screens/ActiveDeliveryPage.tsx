@@ -189,14 +189,12 @@ export default function ActiveDeliveryPage() {
     );
   };
 
-  // Mark the order delivered — walks to_delivery → arrived_delivery →
-  // delivered (the backend validates each transition), credits the rider
-  // wallet, then returns to the orders list.
+  // Mark the order delivered — a single atomic PATCH. The backend allows
+  // milestone skips (any in-flight status → delivered in one update) and
+  // credits the rider wallet exactly once (idempotency-guarded).
   const handleMarkDelivered = useCallback(async () => {
     setIsSyncingStatus(true);
     try {
-      await updateOrderStatus(numericOrderId, "to_delivery");
-      await updateOrderStatus(numericOrderId, "arrived_delivery");
       await updateOrderStatus(numericOrderId, "delivered");
       handleApiSuccess(
         "Delivery Complete",
