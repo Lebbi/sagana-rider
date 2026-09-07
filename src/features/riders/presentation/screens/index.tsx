@@ -17,8 +17,9 @@ import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { useColors } from "@/hooks/useColors";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
-import { getRiderOrders } from "@/lib/riderOrdersApi";
+import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
 import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
+import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
@@ -47,16 +48,26 @@ function toOrderCard(order: RiderOrder, isActive: boolean) {
     dropoffLabel: formatAddressShort(order.delivery.address),
     dropoffDistanceLabel: order.delivery.noteToRider ?? "",
     isActive,
+    status: order.status,
   };
 }
 
 type OrderCard = ReturnType<typeof toOrderCard>;
 
-function DriverOrderCardView({ order }: { order: OrderCard }) {
+function DriverOrderCardView({
+  order,
+  onAccept,
+  acceptInFlight,
+}: {
+  order: OrderCard;
+  onAccept: (orderId: number) => void;
+  acceptInFlight: boolean;
+}) {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const router = useRouter();
   const isActive = order.isActive;
+  const isAvailable = order.status === "searching";
 
   return (
     <View style={styles.orderCard}>
@@ -82,47 +93,67 @@ function DriverOrderCardView({ order }: { order: OrderCard }) {
         </View>
       </View>
 
-      <Pressable
-        style={styles.ctaRow}
-        onPress={() =>
-          router.push({
-            pathname: "/tabs/(riders)/ActiveDeliveryPage",
-            params: { orderId: String(order.orderId) },
-          } as any)
-        }
-        accessibilityRole="button"
-        accessibilityLabel={
-          isActive ? "Open active delivery" : "View active order"
-        }
-      >
-        <View
-          style={[
-            styles.ctaPill,
-            isActive ? styles.ctaPillActive : styles.ctaPillInactive,
-          ]}
+      {isAvailable ? (
+        <View style={styles.ctaRow}>
+          <Pressable
+            style={[styles.ctaPill, styles.ctaPillInactive]}
+            onPress={() => onAccept(order.orderId)}
+            disabled={acceptInFlight}
+            accessibilityRole="button"
+            accessibilityLabel={`Accept order ${order.orderId}`}
+          >
+            {acceptInFlight ? (
+              <ActivityIndicator size="small" color={colors.white} />
+            ) : (
+              <Text style={styles.ctaTextActive}>ACCEPT ORDER</Text>
+            )}
+          </Pressable>
+        </View>
+      ) : (
+        <Pressable
+          style={styles.ctaRow}
+          onPress={() =>
+            router.push({
+              pathname: "/tabs/ActiveDeliveryPage",
+              params: { orderId: String(order.orderId) },
+            } as never)
+          }
+          accessibilityRole="button"
+          accessibilityLabel={
+            isActive ? "Open active delivery" : "View active order"
+          }
         >
-          <Text
+          <View
             style={[
-              styles.ctaText,
-              isActive ? styles.ctaTextActive : styles.ctaTextInactive,
+              styles.ctaPill,
+              isActive ? styles.ctaPillActive : styles.ctaPillInactive,
             ]}
           >
-            {isActive ? "ORDER IS ACTIVE" : "YOU HAVE AN ACTIVE ORDER"}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.ctaArrowPill,
-            isActive ? styles.ctaArrowPillActive : styles.ctaArrowPillInactive,
-          ]}
-        >
-          <MaterialIcons
-            name={IconTheme.chevronRight}
-            size={14}
-            color={colors.white}
-          />
-        </View>
-      </Pressable>
+            <Text
+              style={[
+                styles.ctaText,
+                isActive ? styles.ctaTextActive : styles.ctaTextInactive,
+              ]}
+            >
+              {isActive ? "ORDER IS ACTIVE" : "YOU HAVE AN ACTIVE ORDER"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.ctaArrowPill,
+              isActive
+                ? styles.ctaArrowPillActive
+                : styles.ctaArrowPillInactive,
+            ]}
+          >
+            <MaterialIcons
+              name={IconTheme.chevronRight}
+              size={14}
+              color={colors.white}
+            />
+          </View>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -137,6 +168,7 @@ export default function DriverHomepageScreen() {
   const [activeOrder, setActiveOrder] = useState<RiderOrder | null>(null);
   const [availableOrders, setAvailableOrders] = useState<RiderOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
+  const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
 
   // Fetch rider settings on mount
   useEffect(() => {
@@ -160,41 +192,66 @@ export default function DriverHomepageScreen() {
     };
   }, []);
 
-  // Fetch orders on mount
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const allOrders = await getRiderOrders();
-        if (!mounted) return;
-        // Active order = any order in processing state
-        const active =
-          allOrders.find(
-            (o) =>
-              o.status === "to_pickup" ||
-              o.status === "arrived_pickup" ||
-              o.status === "picked_up" ||
-              o.status === "to_delivery" ||
-              o.status === "arrived_delivery",
-          ) ?? null;
-        // Available orders = searching/accepted (not yet started)
-        const available = allOrders.filter(
-          (o) => o.status === "searching" || o.status === "accepted",
-        );
-        setActiveOrder(active);
-        setAvailableOrders(available);
-      } catch (e) {
-        if (__DEV__) {
-          console.warn("[RiderHome] Failed to load orders:", e);
-        }
-      } finally {
-        if (mounted) setIsLoadingOrders(false);
+  // Fetch orders (also used to refresh after accept)
+  const fetchOrders = useCallback(async () => {
+    try {
+      const allOrders = await getRiderOrders();
+      // Active order = any order in processing state
+      const active =
+        allOrders.find(
+          (o) =>
+            o.status === "to_pickup" ||
+            o.status === "arrived_pickup" ||
+            o.status === "picked_up" ||
+            o.status === "to_delivery" ||
+            o.status === "arrived_delivery",
+        ) ?? null;
+      // Available orders = searching (not yet accepted) + accepted
+      const available = allOrders.filter(
+        (o) => o.status === "searching" || o.status === "accepted",
+      );
+      setActiveOrder(active);
+      setAvailableOrders(available);
+    } catch (e) {
+      if (__DEV__) {
+        console.warn("[RiderHome] Failed to load orders:", e);
       }
-    })();
-    return () => {
-      mounted = false;
-    };
+    } finally {
+      setIsLoadingOrders(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Accept an available order — assigns it to this rider and moves it to
+  // the active column after the refresh.
+  const handleAcceptOrder = useCallback(
+    async (orderId: number) => {
+      setAcceptingOrderId(orderId);
+      try {
+        await acceptOrder(orderId);
+        handleApiSuccess("Order Accepted", "The order is now yours to deliver.");
+        await fetchOrders();
+      } catch (e: any) {
+        const status = e?.response?.status;
+        const msg = e?.response?.data?.message;
+        if (status === 422) {
+          handleApiError(
+            e,
+            msg ?? "This order was just taken by another rider.",
+          );
+        } else {
+          handleApiError(e, "Could not accept the order. Please try again.");
+        }
+        await fetchOrders();
+      } finally {
+        setAcceptingOrderId(null);
+      }
+    },
+    [fetchOrders],
+  );
 
   // Toggle auto-accept
   const handleToggleAutoAccept = useCallback(async (value: boolean) => {
@@ -309,7 +366,11 @@ export default function DriverHomepageScreen() {
                 <ActivityIndicator size="small" color={colors.primary} />
               </View>
             ) : activeCard ? (
-              <DriverOrderCardView order={activeCard} />
+              <DriverOrderCardView
+                order={activeCard}
+                onAccept={handleAcceptOrder}
+                acceptInFlight={acceptingOrderId === activeCard.orderId}
+              />
             ) : (
               <View style={styles.orderCard}>
                 <Text style={styles.routeSubText}>
@@ -325,7 +386,12 @@ export default function DriverHomepageScreen() {
               </View>
             ) : availableCards.length > 0 ? (
               availableCards.map((card) => (
-                <DriverOrderCardView key={card.id} order={card} />
+                <DriverOrderCardView
+                  key={card.id}
+                  order={card}
+                  onAccept={handleAcceptOrder}
+                  acceptInFlight={acceptingOrderId === card.orderId}
+                />
               ))
             ) : (
               <View style={styles.orderCard}>

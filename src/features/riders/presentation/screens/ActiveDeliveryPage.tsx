@@ -2,7 +2,7 @@ import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
     ActivityIndicator,
     Animated,
@@ -22,7 +22,8 @@ import NativeMapView from "@/features/riders/presentation/components/NativeMapVi
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
-import { getRiderOrderById } from "@/lib/riderOrdersApi";
+import { getRiderOrderById, updateOrderStatus } from "@/lib/riderOrdersApi";
+import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
 const SHEET_COLLAPSED_OFFSET = 380;
@@ -41,6 +42,7 @@ export default function ActiveDeliveryPage() {
   const [checkedItems, setCheckedItems] = useState<boolean[]>([]);
   const [activePhase, setActivePhase] = useState<1 | 2>(1);
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
+  const [isSyncingStatus, setIsSyncingStatus] = useState(false);
   const hasCompletedPhaseOneRef = useRef(false);
 
   // Fetch order from API
@@ -85,8 +87,9 @@ export default function ActiveDeliveryPage() {
     [checkedItems],
   );
 
-  // For testing: skip Phase 1 and go straight to delivery (Phase 2)
-  // so we can show rider → SM Pampanga route
+  // All items checked → sync pickup completion to the backend (picked_up),
+  // then run the visual phase transition to Phase 2. On sync failure the
+  // checklist stays usable and the error is surfaced via toast.
   useEffect(() => {
     if (
       !allItemsChecked ||
@@ -95,15 +98,33 @@ export default function ActiveDeliveryPage() {
     )
       return;
     hasCompletedPhaseOneRef.current = true;
-    setShowPhaseTransition(true);
 
-    const timeoutId = setTimeout(() => {
-      setShowPhaseTransition(false);
-      setActivePhase(2);
-    }, 1200);
+    const syncPickupComplete = async () => {
+      setIsSyncingStatus(true);
+      try {
+        await updateOrderStatus(numericOrderId, "picked_up");
+        setShowPhaseTransition(true);
+        setTimeout(() => {
+          setShowPhaseTransition(false);
+          setActivePhase(2);
+        }, 1200);
+      } catch (e: any) {
+        const status = e?.response?.status;
+        const msg = e?.response?.data?.message;
+        handleApiError(
+          e,
+          status === 422
+            ? msg ?? "Could not mark items as collected. Try again."
+            : "Could not save your progress. Check your connection and re-check the items.",
+        );
+        hasCompletedPhaseOneRef.current = false;
+      } finally {
+        setIsSyncingStatus(false);
+      }
+    };
 
-    return () => clearTimeout(timeoutId);
-  }, [activePhase, allItemsChecked]);
+    syncPickupComplete();
+  }, [activePhase, allItemsChecked, numericOrderId]);
 
   const panResponder = useMemo(
     () =>
@@ -168,10 +189,38 @@ export default function ActiveDeliveryPage() {
     );
   };
 
+  // Mark the order delivered — walks to_delivery → arrived_delivery →
+  // delivered (the backend validates each transition), credits the rider
+  // wallet, then returns to the orders list.
+  const handleMarkDelivered = useCallback(async () => {
+    setIsSyncingStatus(true);
+    try {
+      await updateOrderStatus(numericOrderId, "to_delivery");
+      await updateOrderStatus(numericOrderId, "arrived_delivery");
+      await updateOrderStatus(numericOrderId, "delivered");
+      handleApiSuccess(
+        "Delivery Complete",
+        "Earnings have been added to your wallet.",
+      );
+      router.replace("/tabs/RiderOrdersPage" as never);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      const msg = e?.response?.data?.message;
+      handleApiError(
+        e,
+        status === 422
+          ? msg ?? "Could not complete the delivery. Try again."
+          : "Could not save the delivery. Check your connection and try again.",
+      );
+    } finally {
+      setIsSyncingStatus(false);
+    }
+  }, [numericOrderId, router]);
+
   const isPhaseOne = activePhase === 1;
   const headerName = isPhaseOne
-    ? (order?.pickup.farmerName ?? "Jerome Bognot")
-    : (order?.delivery.buyerName ?? "Megan Calalahani");
+    ? (order?.pickup.farmerName ?? "Farmer")
+    : (order?.delivery.buyerName ?? "Buyer");
   const headerNumber = isPhaseOne
     ? (order?.pickup.farmerPhone ?? "")
     : (order?.delivery.buyerPhone ?? "");
@@ -331,7 +380,9 @@ export default function ActiveDeliveryPage() {
               <View style={styles.badgeWrap}>
                 <Text style={styles.badgeText}>Current Pickup</Text>
               </View>
-              <Text style={styles.mainTargetName}>Bognot&rsquo;s Farm</Text>
+              <Text style={styles.mainTargetName}>
+                {order?.pickup.farmerName ?? "Farmer"}
+              </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
                   name={IconTheme.mapMarkerOutline}
@@ -406,7 +457,9 @@ export default function ActiveDeliveryPage() {
               <View style={styles.badgeWrap}>
                 <Text style={styles.badgeText}>Current Delivery</Text>
               </View>
-              <Text style={styles.mainTargetName}>Megan Calalahani</Text>
+              <Text style={styles.mainTargetName}>
+                {order?.delivery.buyerName ?? "Buyer"}
+              </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
                   name={IconTheme.mapMarkerOutline}
@@ -414,13 +467,22 @@ export default function ActiveDeliveryPage() {
                   color="#1E1E1E"
                 />
                 <Text style={styles.baseText}>
-                  Mabini St. Brgy. Sto. Rosario, San Fernando, Pampanga
+                  {[
+                    order?.delivery.address.street,
+                    order?.delivery.address.barangay,
+                    order?.delivery.address.city,
+                    order?.delivery.address.province,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
                 </Text>
               </View>
 
-              <Text style={styles.baseText}>
-                {"Iwanan nyo nalang po sa red na gate"}
-              </Text>
+              {order?.delivery.noteToRider ? (
+                <Text style={styles.baseText}>
+                  {order.delivery.noteToRider}
+                </Text>
+              ) : null}
 
               <Pressable
                 style={[styles.captureButton, styles.captureButtonCompact]}
@@ -433,6 +495,29 @@ export default function ActiveDeliveryPage() {
                 <Text style={styles.captureButtonText}>
                   TAKE PHOTO OF DELIVERY
                 </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.captureButton, styles.captureButtonCompact]}
+                onPress={handleMarkDelivered}
+                disabled={isSyncingStatus}
+                accessibilityRole="button"
+                accessibilityLabel="Mark order as delivered"
+              >
+                {isSyncingStatus ? (
+                  <ActivityIndicator size="small" color="#087434" />
+                ) : (
+                  <>
+                    <MaterialIcons
+                      name={IconTheme.checkCircle}
+                      size={20}
+                      color="#087434"
+                    />
+                    <Text style={styles.captureButtonText}>
+                      MARK AS DELIVERED
+                    </Text>
+                  </>
+                )}
               </Pressable>
             </View>
           )}
