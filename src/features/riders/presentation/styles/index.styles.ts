@@ -82,7 +82,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       height: 334,
       overflow: "hidden",
       position: "relative",
-      backgroundColor: "#0C111B",
+      backgroundColor: colors.backgroundMuted,
     },
     mapImage: {
       width: "100%",

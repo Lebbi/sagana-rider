@@ -33,7 +33,7 @@ export default function SimpleMapFallback({
   destination,
   isDarkMode = false,
 }: SimpleMapFallbackProps) {
-  const zoom = 14;
+  const zoom = 13;
   const centerTile = useMemo(
     () => latLngToTile(destination.latitude, destination.longitude, zoom),
     [destination.latitude, destination.longitude],
@@ -46,10 +46,10 @@ export default function SimpleMapFallback({
       for (let dx = -1; dx <= 1; dx++) {
         const x = centerTile.x + dx;
         const y = centerTile.y + dy;
-        // Use CARTO light tiles (free, no API key)
-        const url = isDarkMode
-          ? `https://a.basemaps.cartocdn.com/dark_all/${zoom}/${x}/${y}.png`
-          : `https://a.basemaps.cartocdn.com/light_all/${zoom}/${x}/${y}.png`;
+        // Use Esri World Street Map tiles — free, no API key, no
+        // User-Agent requirement (OSM blocks non-browser requests,
+        // CARTO now requires an API key).
+        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${zoom}/${y}/${x}`;
         list.push({ x, y, url });
       }
     }
@@ -58,16 +58,20 @@ export default function SimpleMapFallback({
 
   return (
     <View style={styles.container}>
-      <View style={styles.tileGrid}>
-        {tiles.map((tile, index) => (
-          <Image
-            key={`${tile.x}-${tile.y}-${index}`}
-            source={{ uri: tile.url }}
-            style={styles.tile}
-            contentFit="cover"
-          />
-        ))}
-      </View>
+      {/* 3x3 tile grid laid out as 3 rows × 3 columns */}
+      {[0, 1, 2].map((row) => (
+        <View key={`row-${row}`} style={styles.tileRow}>
+          {tiles.slice(row * 3, row * 3 + 3).map((tile) => (
+            <Image
+              key={`${tile.x}-${tile.y}`}
+              source={{ uri: tile.url }}
+              style={styles.tile}
+              contentFit="cover"
+              transition={0}
+            />
+          ))}
+        </View>
+      ))}
     </View>
   );
 }
@@ -75,15 +79,13 @@ export default function SimpleMapFallback({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#E8E8E8",
   },
-  tileGrid: {
+  tileRow: {
     flex: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
   },
   tile: {
-    width: "33.333%",
-    height: "33.333%",
+    flex: 1,
   },
 });

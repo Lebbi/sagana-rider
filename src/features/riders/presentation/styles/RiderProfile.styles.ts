@@ -273,6 +273,12 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       fontFamily: fontFamily.regular,
       fontWeight: fontWeight.regular,
     },
+    logoutLabel: {
+      fontSize: 11,
+      color: colors.error,
+      fontFamily: fontFamily.semiBold,
+      fontWeight: fontWeight.semiBold,
+    },
     settingRight: {
       flexDirection: "row",
       alignItems: "center",

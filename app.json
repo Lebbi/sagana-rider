@@ -52,7 +52,11 @@
           "resizeMode": "contain",
           "backgroundColor": "#D7ECC1"
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-secure-store",
+      "expo-status-bar"
     ],
     "splash": {
       "image": "./assets/branding/sagana-wordform-logo.png",

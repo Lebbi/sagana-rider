@@ -1,19 +1,33 @@
 /**
- * src/features/riders/presentation/components/NativeMapView.tsx
+ * src/features/riders/presentation/components/NativeMapView.native.tsx
  *
- * Interactive map using react-native-maps.
- * Supports pinch zoom, pan, markers, and polylines.
- * Works in Expo Go without API keys.
+ * Map view for Android/iOS. Two modes, auto-selected at runtime:
  *
- * Replaces the WebView-based map which was blocked in Expo Go.
+ *   - Expo Go (Constants.executionEnvironment === 'storeClient'):
+ *     SimpleMapFallback (Esri raster tiles via expo-image). Expo Go
+ *     bundles its own react-native-maps binary that version-mismatches
+ *     the JS package on SDK 57 — the MapView container renders (Google
+ *     logo) but tiles never load. The tile grid always renders.
+ *
+ *   - Dev/standalone builds (developmentClient, preview, production):
+ *     Native react-native-maps MapView with Google Maps. The module is
+ *     compiled into the APK at build time, so the native bridge works
+ *     — full pinch-zoom, pan, route polylines, live rider tracking.
  */
 
 import { MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import Constants from "expo-constants";
+
+// 'storeClient' = running inside the Expo Go app. Everything else
+// (development build, preview APK, Play Store build) has the native
+// modules compiled in.
+const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
 
 interface NativeMapViewProps {
   route: RouteResponse | null;
@@ -26,6 +40,134 @@ interface NativeMapViewProps {
 }
 
 export default function NativeMapView({
+  route,
+  riderLocation,
+  riderHeading,
+  destination,
+  destinationType,
+  isDarkMode,
+  onMapReady,
+}: NativeMapViewProps) {
+  const colors = useColors();
+
+  // ── Expo Go: tile grid fallback ────────────────────────────────
+  if (IS_EXPO_GO) {
+    return (
+      <ExpoGoMap
+        destination={destination}
+        destinationType={destinationType}
+        isDarkMode={isDarkMode}
+        riderLocation={riderLocation}
+        riderHeading={riderHeading}
+        onMapReady={onMapReady}
+      />
+    );
+  }
+
+  // ── Native builds: full Google Maps MapView ────────────────────
+  return (
+    <NativeMap
+      route={route}
+      riderLocation={riderLocation}
+      riderHeading={riderHeading}
+      destination={destination}
+      destinationType={destinationType}
+      isDarkMode={isDarkMode}
+      onMapReady={onMapReady}
+    />
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Expo Go fallback — Esri tile grid with overlaid markers
+// ═══════════════════════════════════════════════════════════════
+
+function ExpoGoMap({
+  destination,
+  destinationType,
+  isDarkMode,
+  riderLocation,
+  riderHeading,
+  onMapReady,
+}: {
+  destination: GeoPoint;
+  destinationType: "pickup" | "delivery";
+  isDarkMode: boolean;
+  riderLocation: GeoPoint | null;
+  riderHeading: number | null;
+  onMapReady?: () => void;
+}) {
+  const colors = useColors();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Signal ready on mount — tiles load asynchronously via expo-image
+  // but the container is interactive right away.
+  useEffect(() => {
+    setIsLoading(false);
+    onMapReady?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      {/* Esri tile grid — no native map module needed */}
+      <SimpleMapFallback destination={destination} isDarkMode={isDarkMode} />
+
+      {/* Destination marker — centered on the tile grid */}
+      <View style={styles.markerOverlay} pointerEvents="none">
+        <View style={styles.markerContainer}>
+          <View
+            style={[
+              styles.marker,
+              destinationType === "pickup"
+                ? styles.pickupMarker
+                : styles.deliveryMarker,
+            ]}
+          >
+            <MaterialIcons
+              name={destinationType === "pickup" ? "warehouse" : "home"}
+              size={22}
+              color="#FFFFFF"
+            />
+          </View>
+        </View>
+      </View>
+
+      {/* Rider marker — shown if GPS is available, positioned at center-top */}
+      {riderLocation && (
+        <View style={styles.riderMarkerOverlay} pointerEvents="none">
+          <View style={styles.markerContainer}>
+            <View
+              style={[
+                styles.riderMarker,
+                {
+                  transform: [{ rotate: `${riderHeading ?? 0}deg` }],
+                },
+              ]}
+            >
+              <MaterialIcons name="two-wheeler" size={22} color="#FFFFFF" />
+            </View>
+          </View>
+        </View>
+      )}
+
+      {isLoading && (
+        <View style={styles.loadingOverlay} pointerEvents="none">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.primary }]}>
+            Loading map...
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Native builds — interactive Google Maps (react-native-maps)
+// ═══════════════════════════════════════════════════════════════
+
+function NativeMap({
   route,
   riderLocation,
   riderHeading,
@@ -65,7 +207,7 @@ export default function NativeMapView({
       return;
     }
 
-    // With only 1 point (destination, no rider GPS yet), animate to it with a visible zoom
+    // With only 1 point (destination, no rider GPS yet), animate to it
     mapRef.current.animateToRegion(
       {
         latitude: destination.latitude,
@@ -86,7 +228,7 @@ export default function NativeMapView({
     <View style={styles.container}>
       <MapView
         ref={mapRef}
-        style={styles.map}
+        style={styles.nativeMap}
         provider={PROVIDER_DEFAULT}
         initialRegion={region}
         showsUserLocation={!!riderLocation}
@@ -96,7 +238,7 @@ export default function NativeMapView({
         showsScale={false}
         showsTraffic={false}
         showsIndoors={false}
-        mapType={isDarkMode ? "standard" : "standard"}
+        mapType="standard"
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
         rotateEnabled={true}
@@ -154,7 +296,7 @@ export default function NativeMapView({
           </Marker>
         )}
 
-        {/* Route polyline */}
+        {/* Route polyline (double stroke: dark outline + brand green) */}
         {route?.polyline && route.polyline.length > 0 && (
           <>
             <Polyline
@@ -194,8 +336,24 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: "hidden",
   },
-  map: {
-    ...StyleSheet.absoluteFillObject,
+  nativeMap: {
+    flex: 1,
+  },
+  markerOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  riderMarkerOverlay: {
+    position: "absolute",
+    top: "30%",
+    left: 0,
+    right: 0,
+    alignItems: "center",
   },
   markerContainer: {
     alignItems: "center",
@@ -221,16 +379,6 @@ const styles = StyleSheet.create({
   deliveryMarker: {
     backgroundColor: "#E53935",
   },
-  markerText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  deliveryMarkerText: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
   riderMarker: {
     width: 44,
     height: 44,
@@ -247,7 +395,11 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.85)",

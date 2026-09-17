@@ -17,6 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
+import { UserProvider } from "@/context/UserContext";
 
 /**
  * Apply a default text style to every `<Text>` instance in the app.
@@ -71,7 +72,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }} />
+        <UserProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </UserProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

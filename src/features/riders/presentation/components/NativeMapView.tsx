@@ -73,6 +73,12 @@ export default function NativeMapView({
     onMapReady?.();
   }, [onMapReady]);
 
+  const handleError = useCallback(() => {
+    setHasError(true);
+    setIsLoading(false);
+    if (__DEV__) console.error("[NativeMapView] MapView onError fired");
+  }, []);
+
   return (
     <View style={styles.container}>
       <MapView
@@ -87,9 +93,12 @@ export default function NativeMapView({
         showsScale={false}
         showsTraffic={false}
         showsIndoors={false}
-        mapType={isDarkMode ? "standard" : "standard"}
+        mapType="standard"
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
+        // @ts-expect-error — onError exists at runtime in react-native-maps
+        // but is missing from the MapViewProps type definitions in 1.27.2.
+        onError={handleError}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}

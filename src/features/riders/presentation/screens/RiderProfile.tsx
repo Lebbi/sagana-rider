@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    Alert,
     Modal,
     Pressable,
     ScrollView,
@@ -116,6 +117,19 @@ export default function RiderProfile() {
     () => vehicles[activeVehicleIndex] ?? vehicles[0],
     [vehicles, activeVehicleIndex],
   );
+
+  const handleLogout = () => {
+    Alert.alert("Log out?", "You will need to log in again to continue.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log out",
+        style: "destructive",
+        onPress: () => {
+          void logout();
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={styles.screen}>
@@ -557,6 +571,26 @@ export default function RiderProfile() {
                 size={14}
                 color={colors.textSubtle}
               />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={handleLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Log out"
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconCircle}>
+                  <MaterialIcons
+                    name={IconTheme.logout}
+                    size={15}
+                    color={colors.error}
+                  />
+                </View>
+                <Text style={styles.logoutLabel}>Log out</Text>
+              </View>
             </TouchableOpacity>
           </View>
         </ScrollView>
