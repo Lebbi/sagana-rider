@@ -68,8 +68,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
-    }
+        "projectId": "1ca12bda-6b72-4a8d-a9c6-04798851391e"
+      },
+      "router": {}
+    },
+    "owner": "lebbb"
   }
 }
