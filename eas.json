@@ -7,7 +7,6 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "channel": "development",
       "android": {
         "gradleCommand": ":app:assembleDebug"
       },
@@ -24,7 +23,6 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
-      "channel": "preview",
       "cache": {
         "disabled": true
       },
@@ -38,7 +36,6 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
-      "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
@@ -52,7 +49,6 @@
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       },
-      "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
         "EAS_SKIP_AUTO_FINGERPRINT": "1"
