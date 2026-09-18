@@ -53,27 +53,50 @@ export default function ActiveDeliveryPage() {
   const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
   const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
 
-  // Fetch order from API
+  // Fetch order from API — retry up to 3 times with 1s delay because
+  // the accept endpoint may not have committed the rider_id assignment
+  // by the time we navigate here (race condition between acceptOrder
+  // completing and ActiveDeliveryPage mounting).
   useEffect(() => {
     if (!numericOrderId) return;
     setIsLoading(true);
-    getRiderOrderById(numericOrderId)
-      .then((fetched) => {
-        setOrder(fetched);
-        setCheckedItems(fetched.pickup.items.map(() => false));
-        // Set phase from the order's actual delivery_status:
-        // Phase 1 (pickup) = accepted, to_pickup, arrived_pickup
-        // Phase 2 (delivery) = picked_up, to_delivery, arrived_delivery
-        const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
-        if (!pickupStatuses.includes(fetched.status)) {
-          setActivePhase(2);
-          hasCompletedPhaseOneRef.current = true;
+    let cancelled = false;
+    let attempt = 0;
+
+    const fetchWithRetry = async () => {
+      while (attempt < 3) {
+        attempt++;
+        try {
+          const fetched = await getRiderOrderById(numericOrderId);
+          if (cancelled) return;
+          setOrder(fetched);
+          setCheckedItems(fetched.pickup.items.map(() => false));
+          const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
+          if (!pickupStatuses.includes(fetched.status)) {
+            setActivePhase(2);
+            hasCompletedPhaseOneRef.current = true;
+          }
+          return;
+        } catch (e: any) {
+          if (__DEV__)
+            console.warn(
+              `[ActiveDelivery] Fetch attempt ${attempt} failed:`,
+              e?.response?.status,
+            );
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
         }
-      })
-      .catch((e) => {
-        if (__DEV__) console.warn("[ActiveDelivery] Failed to fetch order:", e);
-      })
-      .finally(() => setIsLoading(false));
+      }
+      if (!cancelled && __DEV__)
+        console.warn("[ActiveDelivery] All fetch retries failed");
+    };
+
+    fetchWithRetry().finally(() => {
+      if (!cancelled) setIsLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [numericOrderId]);
 
   // Determine destination based on phase
@@ -91,11 +114,16 @@ export default function ActiveDeliveryPage() {
     destinationType: activePhase === 1 ? "pickup" : "delivery",
   });
 
-  // Start GPS tracking on mount
+  // Start GPS tracking + route fetching only after the order loads
+  // (destination is null until getRiderOrderById succeeds). Starting
+  // before that sends a routing request to DEFAULT_MAP_CENTER — wasted
+  // bandwidth and confusing logs.
   useEffect(() => {
+    if (!order) return;
     nav.startNavigation();
     return () => nav.stopNavigation();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order]);
 
   const translateY = useRef(new Animated.Value(SHEET_COLLAPSED_OFFSET)).current;
   const dragStartYRef = useRef(SHEET_COLLAPSED_OFFSET);
