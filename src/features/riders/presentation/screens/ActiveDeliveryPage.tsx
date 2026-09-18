@@ -36,7 +36,13 @@ export default function ActiveDeliveryPage() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
-  const numericOrderId = orderId ? parseInt(orderId, 10) : 0;
+  // Store orderId in a ref — useLocalSearchParams loses the param when
+  // the rider switches tabs and comes back (becomes undefined → 0),
+  // causing PATCH /rider/orders/0/status → 404. The ref preserves the
+  // last valid orderId across tab switches.
+  const orderIdRef = useRef(0);
+  const numericOrderId = orderId ? parseInt(orderId, 10) : orderIdRef.current;
+  if (orderId) orderIdRef.current = parseInt(orderId, 10);
 
   const [order, setOrder] = useState<RiderOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
