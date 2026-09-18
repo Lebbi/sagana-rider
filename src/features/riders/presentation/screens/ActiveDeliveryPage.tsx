@@ -36,13 +36,7 @@ export default function ActiveDeliveryPage() {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
-  // Store orderId in a ref — useLocalSearchParams loses the param when
-  // the rider switches tabs and comes back (becomes undefined → 0),
-  // causing PATCH /rider/orders/0/status → 404. The ref preserves the
-  // last valid orderId across tab switches.
-  const orderIdRef = useRef(0);
-  const numericOrderId = orderId ? parseInt(orderId, 10) : orderIdRef.current;
-  if (orderId) orderIdRef.current = parseInt(orderId, 10);
+  const numericOrderId = orderId ? parseInt(orderId, 10) : 0;
 
   const [order, setOrder] = useState<RiderOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -156,7 +150,7 @@ export default function ActiveDeliveryPage() {
     const syncPickupComplete = async () => {
       setIsSyncingStatus(true);
       try {
-        await updateOrderStatus(numericOrderId, "picked_up", pickupPhoto);
+        await updateOrderStatus(order?.orderId ?? numericOrderId, "picked_up", pickupPhoto);
         setShowPhaseTransition(true);
         setTimeout(() => {
           setShowPhaseTransition(false);
@@ -278,16 +272,16 @@ export default function ActiveDeliveryPage() {
   // exactly once (idempotency-guarded). The first photo is sent as proof.
   const handleMarkDelivered = useCallback(async () => {
     if (deliveryPhotos.length === 0) return;
+    const id = order?.orderId ?? numericOrderId;
+    if (!id) return;
     setIsSyncingStatus(true);
     try {
-      await updateOrderStatus(numericOrderId, "delivered", deliveryPhotos[0]);
+      await updateOrderStatus(id, "delivered", deliveryPhotos[0]);
       handleApiSuccess(
         "Delivery Complete",
         "Earnings have been added to your wallet.",
       );
-      // Navigate back to Home tab (not Orders) so the rider sees the
-      // updated Active Delivery section with the order removed.
-      router.replace("/tabs/index" as never);
+      router.replace("/tabs" as never);
     } catch (e: any) {
       const status = e?.response?.status;
       const msg = e?.response?.data?.message;
