@@ -294,7 +294,7 @@ export default function ActiveDeliveryPage() {
     } finally {
       setIsSyncingStatus(false);
     }
-  }, [numericOrderId, router]);
+  }, [numericOrderId, router, deliveryPhotos]);
 
   const isPhaseOne = activePhase === 1;
   const headerName = isPhaseOne
