@@ -3,16 +3,15 @@
  *
  * Map view for Android/iOS. Two modes, auto-selected at runtime:
  *
- *   - Expo Go (Constants.executionEnvironment === 'storeClient'):
- *     SimpleMapFallback (Esri raster tiles via expo-image). Expo Go
- *     bundles its own react-native-maps binary that version-mismatches
- *     the JS package on SDK 57 — the MapView container renders (Google
- *     logo) but tiles never load. The tile grid always renders.
+ *   - No API key (Expo Go OR keyless standalone build):
+ *     SimpleMapFallback (Esri raster tiles via expo-image). The native
+ *     react-native-maps MapView requires a Google Maps Android API key
+ *     in AndroidManifest.xml — without it, MapView.onCreate throws
+ *     "API key not found" and crashes the app. The tile grid always
+ *     renders, no key needed.
  *
- *   - Dev/standalone builds (developmentClient, preview, production):
- *     Native react-native-maps MapView with Google Maps. The module is
- *     compiled into the APK at build time, so the native bridge works
- *     — full pinch-zoom, pan, route polylines, live rider tracking.
+ *   - With EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (standalone builds with key):
+ *     Native react-native-maps MapView with Google Maps. Full pinch-zoom,
  */
 
 import { MaterialIcons } from "@/constants/IconTheme";
@@ -22,12 +21,14 @@ import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
-import Constants from "expo-constants";
 
-// 'storeClient' = running inside the Expo Go app. Everything else
-// (development build, preview APK, Play Store build) has the native
-// modules compiled in.
-const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
+// Use native Google Maps MapView only when a Google Maps Android API key
+// is available (env var EXPO_PUBLIC_GOOGLE_MAPS_API_KEY, injected at build
+// time via eas.json). Without a key, native MapView crashes on onCreate
+// with "API key not found" — so we fall back to the Esri tile grid in
+// ALL environments that lack one (Expo Go AND keyless standalone builds).
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const USE_NATIVE_MAP = !!GOOGLE_MAPS_API_KEY;
 
 interface NativeMapViewProps {
   route: RouteResponse | null;
@@ -50,8 +51,8 @@ export default function NativeMapView({
 }: NativeMapViewProps) {
   const colors = useColors();
 
-  // ── Expo Go: tile grid fallback ────────────────────────────────
-  if (IS_EXPO_GO) {
+  // ── No Google Maps API key: tile grid fallback ────────────────
+  if (!USE_NATIVE_MAP) {
     return (
       <ExpoGoMap
         destination={destination}
@@ -79,7 +80,7 @@ export default function NativeMapView({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Expo Go fallback — Esri tile grid with overlaid markers
+// Tile grid fallback — Esri tiles with overlaid markers (no API key)
 // ═══════════════════════════════════════════════════════════════
 
 function ExpoGoMap({
