@@ -56,7 +56,7 @@ try {
 
 const api = axios.create({
   baseURL: resolvedBaseUrl,
-  timeout: 30000, // 30 seconds - reasonable timeout for API calls
+  timeout: 60000, // 60s — Render free tier cold-start can take 30-50s
   headers: {
     Accept: "application/json",
     // DO NOT set Content-Type in defaults - let interceptor handle it per request
