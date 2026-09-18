@@ -190,7 +190,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
     priceText: {
       fontFamily: fontFamily.bold,
       fontWeight: fontWeight.bold,
-      fontSize: 18,
+      fontSize: 16,
       color: colors.primary,
     },
     expireWrap: {
@@ -213,10 +213,10 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
     },
     recipientText: {
       marginTop: -2,
-      fontFamily: fontFamily.bold,
-      fontWeight: fontWeight.bold,
-      fontSize: 7,
-      color: colors.text,
+      fontFamily: fontFamily.semiBold,
+      fontWeight: fontWeight.semiBold,
+      fontSize: 11,
+      color: colors.textDark,
     },
     routeRow: {
       marginTop: 6,
@@ -237,17 +237,17 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       backgroundColor: colors.success,
     },
     routeMainText: {
-      fontFamily: fontFamily.regular,
-      fontWeight: fontWeight.regular,
-      fontSize: 8,
-      color: colors.text,
+      fontFamily: fontFamily.medium,
+      fontWeight: fontWeight.medium,
+      fontSize: 11,
+      color: colors.textDark,
     },
     routeSubText: {
       marginTop: 1,
       fontFamily: fontFamily.regular,
       fontWeight: fontWeight.regular,
-      fontSize: 6,
-      color: colors.text,
+      fontSize: 9,
+      color: colors.textMuted,
     },
     ctaRow: {
       marginTop: 7,
@@ -263,7 +263,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
     },
     ctaPillActive: {
       width: 156,
-      backgroundColor: "rgba(8, 116, 52, 0.5)",
+      backgroundColor: colors.success,
     },
     ctaPillInactive: {
       width: 156,
@@ -286,11 +286,11 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
     ctaText: {
       fontFamily: fontFamily.bold,
       fontWeight: fontWeight.bold,
-      fontSize: 8,
-      letterSpacing: 0.8,
+      fontSize: 10,
+      letterSpacing: 0.5,
     },
     ctaTextActive: {
-      color: colors.textDark,
+      color: "#FFFFFF",
     },
     ctaTextInactive: {
       color: colors.error,

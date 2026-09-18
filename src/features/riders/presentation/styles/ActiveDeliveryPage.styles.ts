@@ -6,11 +6,11 @@ const MAP_TOP_HEIGHT = 420;
 export const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#0C111B",
+    backgroundColor: "#F5F5F5",
   },
   safeArea: {
     flex: 1,
-    backgroundColor: "#0C111B",
+    backgroundColor: "#F5F5F5",
   },
   mapArea: {
     flex: 1,

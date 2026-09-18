@@ -250,7 +250,9 @@ export default function ActiveDeliveryPage() {
         "Delivery Complete",
         "Earnings have been added to your wallet.",
       );
-      router.replace("/tabs/RiderOrdersPage" as never);
+      // Navigate back to Home tab (not Orders) so the rider sees the
+      // updated Active Delivery section with the order removed.
+      router.replace("/tabs/index" as never);
     } catch (e: any) {
       const status = e?.response?.status;
       const msg = e?.response?.data?.message;
@@ -670,6 +672,23 @@ export default function ActiveDeliveryPage() {
           <View style={styles.phaseTransitionCard}>
             <ActivityIndicator size="small" color="#087434" />
             <Text style={styles.phaseTransitionText}>Phase 1 complete</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Syncing overlay — shown during picked_up / delivered PATCH */}
+      <Modal
+        visible={isSyncingStatus && !showPhaseTransition}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.phaseTransitionOverlay}>
+          <View style={styles.phaseTransitionCard}>
+            <ActivityIndicator size="small" color="#087434" />
+            <Text style={styles.phaseTransitionText}>
+              {activePhase === 1 ? "Completing pickup..." : "Completing delivery..."}
+            </Text>
           </View>
         </View>
       </Modal>

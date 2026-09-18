@@ -240,6 +240,12 @@ export default function DriverHomepageScreen() {
         await acceptOrder(orderId);
         handleApiSuccess("Order Accepted", "The order is now yours to deliver.");
         await fetchOrders();
+        // Navigate to Active Delivery immediately so the rider sees the
+        // order details instead of having to tap the Active card manually.
+        router.push({
+          pathname: "/tabs/ActiveDeliveryPage",
+          params: { orderId: String(orderId) },
+        } as never);
       } catch (e: any) {
         const status = e?.response?.status;
         const msg = e?.response?.data?.message;
