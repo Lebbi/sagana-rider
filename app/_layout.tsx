@@ -18,6 +18,7 @@ import "react-native-reanimated";
 
 import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
 import { UserProvider } from "@/context/UserContext";
+import Toast from "react-native-toast-message";
 
 /**
  * Apply a default text style to every `<Text>` instance in the app.
@@ -74,7 +75,10 @@ export default function RootLayout() {
         <StatusBar style="dark" />
         <UserProvider>
           <Stack screenOptions={{ headerShown: false }} />
-        </UserProvider>
+          {/* Toast host — required for handleApiSuccess/handleApiError to
+              render. Without this, all toasts are silently invisible. */}
+          <Toast />
+      </UserProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

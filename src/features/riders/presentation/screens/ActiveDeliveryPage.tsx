@@ -48,9 +48,10 @@ export default function ActiveDeliveryPage() {
 
   // Proof photos: base64 strings sent to backend on status update.
   // Pickup photo is required before the checklist auto-completes.
-  // Delivery photo is required before "Mark as Delivered" is enabled.
+  // Delivery photos: at least one required before "Mark as Delivered"
+  // is enabled; rider can add more (displayed side-by-side).
   const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
-  const [deliveryPhoto, setDeliveryPhoto] = useState<string | null>(null);
+  const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
 
   // Fetch order from API
   useEffect(() => {
@@ -219,7 +220,7 @@ export default function ActiveDeliveryPage() {
       return null;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       quality: 0.5,
       base64: true,
       allowsEditing: false,
@@ -235,17 +236,17 @@ export default function ActiveDeliveryPage() {
 
   const handleTakeDeliveryPhoto = useCallback(async () => {
     const photo = await takePhoto();
-    if (photo) setDeliveryPhoto(photo);
+    if (photo) setDeliveryPhotos((prev) => [...prev, photo]);
   }, [takePhoto]);
 
-  // Mark the order delivered — requires a delivery proof photo.
+  // Mark the order delivered — requires at least one delivery proof photo.
   // The backend allows milestone skips and credits the rider wallet
-  // exactly once (idempotency-guarded). The photo is sent as proof.
+  // exactly once (idempotency-guarded). The first photo is sent as proof.
   const handleMarkDelivered = useCallback(async () => {
-    if (!deliveryPhoto) return;
+    if (deliveryPhotos.length === 0) return;
     setIsSyncingStatus(true);
     try {
-      await updateOrderStatus(numericOrderId, "delivered", deliveryPhoto);
+      await updateOrderStatus(numericOrderId, "delivered", deliveryPhotos[0]);
       handleApiSuccess(
         "Delivery Complete",
         "Earnings have been added to your wallet.",
@@ -589,36 +590,85 @@ export default function ActiveDeliveryPage() {
                 style={[
                   styles.captureButton,
                   styles.captureButtonCompact,
-                  deliveryPhoto ? { opacity: 0.5 } : null,
+                  deliveryPhotos.length > 0 ? { opacity: 0.5 } : null,
                 ]}
                 onPress={handleTakeDeliveryPhoto}
                 accessibilityRole="button"
                 accessibilityLabel="Take photo of delivered package"
               >
                 <MaterialIcons
-                  name={deliveryPhoto ? IconTheme.checkCircle : IconTheme.camera}
+                  name={
+                    deliveryPhotos.length > 0
+                      ? IconTheme.checkCircle
+                      : IconTheme.camera
+                  }
                   size={20}
                   color="#087434"
                 />
                 <Text style={styles.captureButtonText}>
-                  {deliveryPhoto ? "DELIVERY PHOTO TAKEN" : "TAKE PHOTO OF DELIVERY"}
+                  {deliveryPhotos.length > 0
+                    ? "DELIVERY PHOTO TAKEN"
+                    : "TAKE PHOTO OF DELIVERY"}
                 </Text>
               </Pressable>
 
-              {deliveryPhoto && (
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${deliveryPhoto}` }}
-                  style={{
-                    width: "100%",
-                    height: 120,
-                    borderRadius: 8,
-                    marginTop: 8,
-                  }}
-                  contentFit="cover"
-                />
+              {deliveryPhotos.length > 0 && (
+                <>
+                  {/* Thumbnails in one row, side by side */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      gap: 6,
+                      marginTop: 8,
+                    }}
+                  >
+                    {deliveryPhotos.map((photo, index) => (
+                      <Image
+                        key={index}
+                        source={{ uri: `data:image/jpeg;base64,${photo}` }}
+                        style={{
+                          flex: 1,
+                          height: 90,
+                          borderRadius: 8,
+                        }}
+                        contentFit="cover"
+                      />
+                    ))}
+                  </View>
+
+                  {/* Add another photo — compact secondary button */}
+                  <Pressable
+                    style={{
+                      marginTop: 8,
+                      minHeight: 36,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: "#087434",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
+                    }}
+                    onPress={handleTakeDeliveryPhoto}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add another delivery photo"
+                  >
+                    <MaterialIcons name="add-a-photo" size={16} color="#087434" />
+                    <Text
+                      style={{
+                        fontFamily: "StackSansHeadline_700Bold",
+                        fontSize: 8,
+                        color: "#087434",
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      ADD ANOTHER PHOTO
+                    </Text>
+                  </Pressable>
+                </>
               )}
 
-              {!deliveryPhoto && (
+              {!deliveryPhotos.length && (
                 <Text
                   style={{
                     fontSize: 9,
@@ -635,23 +685,32 @@ export default function ActiveDeliveryPage() {
                 style={[
                   styles.captureButton,
                   styles.captureButtonCompact,
-                  !deliveryPhoto ? { opacity: 0.4 } : null,
+                  deliveryPhotos.length === 0
+                    ? { opacity: 0.4, backgroundColor: "#DCDCDC" }
+                    : { backgroundColor: "#087434" },
                 ]}
                 onPress={handleMarkDelivered}
-                disabled={isSyncingStatus || !deliveryPhoto}
+                disabled={isSyncingStatus || deliveryPhotos.length === 0}
                 accessibilityRole="button"
                 accessibilityLabel="Mark order as delivered"
               >
                 {isSyncingStatus ? (
-                  <ActivityIndicator size="small" color="#087434" />
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <>
                     <MaterialIcons
                       name={IconTheme.checkCircle}
                       size={20}
-                      color="#087434"
+                      color={deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A"}
                     />
-                    <Text style={styles.captureButtonText}>
+                    <Text
+                      style={[
+                        styles.captureButtonText,
+                        {
+                          color: deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A",
+                        },
+                      ]}
+                    >
                       MARK AS DELIVERED
                     </Text>
                   </>
