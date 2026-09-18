@@ -196,19 +196,20 @@ export default function DriverHomepageScreen() {
   const fetchOrders = useCallback(async () => {
     try {
       const allOrders = await getRiderOrders();
-      // Active order = any order in processing state
+      // Active order = accepted or any in-progress state
       const active =
         allOrders.find(
           (o) =>
+            o.status === "accepted" ||
             o.status === "to_pickup" ||
             o.status === "arrived_pickup" ||
             o.status === "picked_up" ||
             o.status === "to_delivery" ||
             o.status === "arrived_delivery",
         ) ?? null;
-      // Available orders = searching (not yet accepted) + accepted
+      // Available orders = searching only (not yet accepted by anyone)
       const available = allOrders.filter(
-        (o) => o.status === "searching" || o.status === "accepted",
+        (o) => o.status === "searching",
       );
       setActiveOrder(active);
       setAvailableOrders(available);

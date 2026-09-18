@@ -53,8 +53,18 @@ export default function ActiveDeliveryPage() {
       .then((fetched) => {
         setOrder(fetched);
         setCheckedItems(fetched.pickup.items.map(() => false));
+        // Set phase from the order's actual delivery_status:
+        // Phase 1 (pickup) = accepted, to_pickup, arrived_pickup
+        // Phase 2 (delivery) = picked_up, to_delivery, arrived_delivery
+        const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
+        if (!pickupStatuses.includes(fetched.status)) {
+          setActivePhase(2);
+          hasCompletedPhaseOneRef.current = true;
+        }
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (__DEV__) console.warn("[ActiveDelivery] Failed to fetch order:", e);
+      })
       .finally(() => setIsLoading(false));
   }, [numericOrderId]);
 
