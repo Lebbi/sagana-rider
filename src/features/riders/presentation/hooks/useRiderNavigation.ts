@@ -64,12 +64,8 @@ export function useRiderNavigation(
 ): UseRiderNavigationReturn {
   const { orderId, destination, destinationType } = params;
 
-  const [riderLocation, setRiderLocation] = useState<GeoPoint | null>({
-    // DUMMY RIDER LOCATION for testing — starting point for route to SM Pampanga
-    latitude: 15.135,
-    longitude: 120.62,
-  });
-  const [riderHeading, setRiderHeading] = useState<number | null>(315);
+  const [riderLocation, setRiderLocation] = useState<GeoPoint | null>(null);
+  const [riderHeading, setRiderHeading] = useState<number | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsPermissionGranted, setGpsPermissionGranted] = useState(false);
 

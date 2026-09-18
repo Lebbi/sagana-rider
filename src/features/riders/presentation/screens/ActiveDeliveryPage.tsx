@@ -1,6 +1,7 @@
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
 import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
@@ -44,6 +45,12 @@ export default function ActiveDeliveryPage() {
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   const [isSyncingStatus, setIsSyncingStatus] = useState(false);
   const hasCompletedPhaseOneRef = useRef(false);
+
+  // Proof photos: base64 strings sent to backend on status update.
+  // Pickup photo is required before the checklist auto-completes.
+  // Delivery photo is required before "Mark as Delivered" is enabled.
+  const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
+  const [deliveryPhoto, setDeliveryPhoto] = useState<string | null>(null);
 
   // Fetch order from API
   useEffect(() => {
@@ -97,12 +104,14 @@ export default function ActiveDeliveryPage() {
     [checkedItems],
   );
 
-  // All items checked → sync pickup completion to the backend (picked_up),
-  // then run the visual phase transition to Phase 2. On sync failure the
-  // checklist stays usable and the error is surfaced via toast.
+  // All items checked + pickup photo taken → sync pickup completion to
+  // the backend (picked_up), then run the visual phase transition to
+  // Phase 2. The photo is sent as proof. On sync failure the checklist
+  // stays usable and the error is surfaced via toast.
   useEffect(() => {
     if (
       !allItemsChecked ||
+      !pickupPhoto ||
       activePhase !== 1 ||
       hasCompletedPhaseOneRef.current
     )
@@ -112,7 +121,7 @@ export default function ActiveDeliveryPage() {
     const syncPickupComplete = async () => {
       setIsSyncingStatus(true);
       try {
-        await updateOrderStatus(numericOrderId, "picked_up");
+        await updateOrderStatus(numericOrderId, "picked_up", pickupPhoto);
         setShowPhaseTransition(true);
         setTimeout(() => {
           setShowPhaseTransition(false);
@@ -199,13 +208,44 @@ export default function ActiveDeliveryPage() {
     );
   };
 
-  // Mark the order delivered — a single atomic PATCH. The backend allows
-  // milestone skips (any in-flight status → delivered in one update) and
-  // credits the rider wallet exactly once (idempotency-guarded).
+  // Launch camera and return base64 (or null if cancelled/failed).
+  const takePhoto = useCallback(async (): Promise<string | null> => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      handleApiError(
+        new Error("Camera permission denied"),
+        "Camera access is needed to take proof photos.",
+      );
+      return null;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.5,
+      base64: true,
+      allowsEditing: false,
+    });
+    if (result.canceled || !result.assets?.[0]?.base64) return null;
+    return result.assets[0].base64;
+  }, []);
+
+  const handleTakePickupPhoto = useCallback(async () => {
+    const photo = await takePhoto();
+    if (photo) setPickupPhoto(photo);
+  }, [takePhoto]);
+
+  const handleTakeDeliveryPhoto = useCallback(async () => {
+    const photo = await takePhoto();
+    if (photo) setDeliveryPhoto(photo);
+  }, [takePhoto]);
+
+  // Mark the order delivered — requires a delivery proof photo.
+  // The backend allows milestone skips and credits the rider wallet
+  // exactly once (idempotency-guarded). The photo is sent as proof.
   const handleMarkDelivered = useCallback(async () => {
+    if (!deliveryPhoto) return;
     setIsSyncingStatus(true);
     try {
-      await updateOrderStatus(numericOrderId, "delivered");
+      await updateOrderStatus(numericOrderId, "delivered", deliveryPhoto);
       handleApiSuccess(
         "Delivery Complete",
         "Earnings have been added to your wallet.",
@@ -235,6 +275,22 @@ export default function ActiveDeliveryPage() {
   const headerAvatar = isPhaseOne
     ? (order?.pickup.farmerPhoto ?? undefined)
     : (order?.delivery.buyerPhoto ?? undefined);
+
+  // Loading state — show spinner before the order data arrives
+  if (isLoading || !order) {
+    return (
+      <View style={styles.screen}>
+        <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+            <ActivityIndicator size="large" color="#087434" />
+            <Text style={{ marginTop: 12, fontSize: 12, color: "#7A7A7A" }}>
+              Loading order...
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -449,16 +505,51 @@ export default function ActiveDeliveryPage() {
                 })}
               </View>
 
-              <Pressable style={styles.captureButton}>
+              <Pressable
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  pickupPhoto ? { opacity: 0.5 } : null,
+                ]}
+                onPress={handleTakePickupPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo of produce at pickup"
+              >
                 <MaterialIcons
-                  name={IconTheme.camera}
+                  name={pickupPhoto ? IconTheme.checkCircle : IconTheme.camera}
                   size={20}
                   color="#087434"
                 />
                 <Text style={styles.captureButtonText}>
-                  TAKE PHOTO OF PRODUCE
+                  {pickupPhoto ? "PRODUCE PHOTO TAKEN" : "TAKE PHOTO OF PRODUCE"}
                 </Text>
               </Pressable>
+
+              {pickupPhoto && (
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${pickupPhoto}` }}
+                  style={{
+                    width: "100%",
+                    height: 120,
+                    borderRadius: 8,
+                    marginTop: 8,
+                  }}
+                  contentFit="cover"
+                />
+              )}
+
+              {!pickupPhoto && allItemsChecked && (
+                <Text
+                  style={{
+                    fontSize: 9,
+                    color: "#ba1a1a",
+                    marginTop: 8,
+                    textAlign: "center",
+                  }}
+                >
+                  Take a photo of the produce to complete pickup.
+                </Text>
+              )}
             </View>
           ) : (
             <View style={styles.sheetBody}>
@@ -493,22 +584,59 @@ export default function ActiveDeliveryPage() {
               ) : null}
 
               <Pressable
-                style={[styles.captureButton, styles.captureButtonCompact]}
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  deliveryPhoto ? { opacity: 0.5 } : null,
+                ]}
+                onPress={handleTakeDeliveryPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo of delivered package"
               >
                 <MaterialIcons
-                  name={IconTheme.camera}
+                  name={deliveryPhoto ? IconTheme.checkCircle : IconTheme.camera}
                   size={20}
                   color="#087434"
                 />
                 <Text style={styles.captureButtonText}>
-                  TAKE PHOTO OF DELIVERY
+                  {deliveryPhoto ? "DELIVERY PHOTO TAKEN" : "TAKE PHOTO OF DELIVERY"}
                 </Text>
               </Pressable>
 
+              {deliveryPhoto && (
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${deliveryPhoto}` }}
+                  style={{
+                    width: "100%",
+                    height: 120,
+                    borderRadius: 8,
+                    marginTop: 8,
+                  }}
+                  contentFit="cover"
+                />
+              )}
+
+              {!deliveryPhoto && (
+                <Text
+                  style={{
+                    fontSize: 9,
+                    color: "#ba1a1a",
+                    marginTop: 8,
+                    textAlign: "center",
+                  }}
+                >
+                  Take a photo of the delivered package first.
+                </Text>
+              )}
+
               <Pressable
-                style={[styles.captureButton, styles.captureButtonCompact]}
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  !deliveryPhoto ? { opacity: 0.4 } : null,
+                ]}
                 onPress={handleMarkDelivered}
-                disabled={isSyncingStatus}
+                disabled={isSyncingStatus || !deliveryPhoto}
                 accessibilityRole="button"
                 accessibilityLabel="Mark order as delivered"
               >

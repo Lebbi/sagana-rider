@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -222,9 +222,14 @@ export default function DriverHomepageScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+  // Re-fetch orders every time the Home tab gains focus — keeps Active
+  // Delivery and Available Orders fresh after returning from Active
+  // Delivery page, Wallet, or any other tab.
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders]),
+  );
 
   // Accept an available order — assigns it to this rider and moves it to
   // the active column after the refresh.
