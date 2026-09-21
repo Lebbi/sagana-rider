@@ -172,7 +172,7 @@ export default function ActiveDeliveryPage() {
     };
 
     syncPickupComplete();
-  }, [activePhase, allItemsChecked, numericOrderId]);
+  }, [activePhase, allItemsChecked, pickupPhoto, numericOrderId, order]);
 
   const panResponder = useMemo(
     () =>
@@ -524,8 +524,8 @@ export default function ActiveDeliveryPage() {
                       <MaterialIcons
                         name={
                           checkedItems[index]
-                            ? ("checkbox-marked" as any)
-                            : ("checkbox-blank-outline" as any)
+                            ? "check-box"
+                            : "check-box-outline-blank"
                         }
                         size={14}
                         color={checkedItems[index] ? "#087434" : "#C4C4C4"}

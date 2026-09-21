@@ -122,8 +122,10 @@ export function useRiderNavigation(
         setCurrentStepIndex(0);
         setDistanceToNextStep(response.steps[0]?.distance ?? 0);
       } catch (e) {
+        // OSRM demo server is rate-limited and may return 502/503.
+        // Non-blocking — the map still shows, just without a route line.
         if (__DEV__) {
-          console.error("[useRiderNavigation] Error fetching route:", e);
+          console.warn("[useRiderNavigation] Route fetch failed (non-blocking):", e?.response?.status ?? e?.message);
         }
       } finally {
         setIsLoadingRoute(false);
