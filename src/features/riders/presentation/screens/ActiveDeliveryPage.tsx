@@ -2,7 +2,7 @@ import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
     ActivityIndicator,
@@ -53,12 +53,30 @@ export default function ActiveDeliveryPage() {
   const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
   const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
 
-  // Fetch order from API — retry up to 3 times with 1s delay because
+  // When the Active tab is tapped without an orderId param (e.g. after
+  // delivering and returning to Home, then tapping the Active tab),
+  // clear any stale order state so the empty state shows instead of
+  // a delivered order lingering in memory.
+  useFocusEffect(
+    useCallback(() => {
+      if (!orderId) {
+        setOrder(null);
+        setIsLoading(false);
+      }
+    }, [orderId]),
+  );
+
+  // Fetch order from API — retry up to 3 times with 500ms delay because
   // the accept endpoint may not have committed the rider_id assignment
   // by the time we navigate here (race condition between acceptOrder
   // completing and ActiveDeliveryPage mounting).
+  // If numericOrderId is 0 (tab switch lost the param), don't fetch —
+  // the empty-state UI will show instead of an infinite spinner.
   useEffect(() => {
-    if (!numericOrderId) return;
+    if (!numericOrderId) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     let cancelled = false;
     let attempt = 0;
@@ -69,6 +87,12 @@ export default function ActiveDeliveryPage() {
         try {
           const fetched = await getRiderOrderById(numericOrderId);
           if (cancelled) return;
+          // If the order is already delivered/cancelled, don't show it —
+          // the rider already completed this delivery. Show empty state.
+          if (fetched.status === "delivered" || fetched.status === "cancelled") {
+            setOrder(null);
+            return;
+          }
           setOrder(fetched);
           setCheckedItems(fetched.pickup.items.map(() => false));
           const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
@@ -83,7 +107,7 @@ export default function ActiveDeliveryPage() {
               `[ActiveDelivery] Fetch attempt ${attempt} failed:`,
               e?.response?.status,
             );
-          if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 500));
         }
       }
       if (!cancelled && __DEV__)
@@ -307,8 +331,8 @@ export default function ActiveDeliveryPage() {
     ? (order?.pickup.farmerPhoto ?? undefined)
     : (order?.delivery.buyerPhoto ?? undefined);
 
-  // Loading state — show spinner before the order data arrives
-  if (isLoading || !order) {
+  // Loading state — show spinner only while fetching
+  if (isLoading) {
     return (
       <View style={styles.screen}>
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -316,6 +340,26 @@ export default function ActiveDeliveryPage() {
             <ActivityIndicator size="large" color="#087434" />
             <Text style={{ marginTop: 12, fontSize: 12, color: "#7A7A7A" }}>
               Loading order...
+            </Text>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  // Empty state — no active order (either no orderId param from tab
+  // switch, or the order was already delivered/cancelled)
+  if (!order) {
+    return (
+      <View style={styles.screen}>
+        <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+          <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
+            <MaterialIcons name="check-circle-outline" size={64} color="#087434" />
+            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: "600", color: "#1B1B1B", textAlign: "center" }}>
+              No Active Delivery
+            </Text>
+            <Text style={{ marginTop: 8, fontSize: 12, color: "#7A7A7A", textAlign: "center" }}>
+              Accept an order from the Home tab to start a delivery.
             </Text>
           </View>
         </SafeAreaView>
