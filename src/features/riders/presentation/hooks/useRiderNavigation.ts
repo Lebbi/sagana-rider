@@ -121,7 +121,7 @@ export function useRiderNavigation(
         setRoute(response);
         setCurrentStepIndex(0);
         setDistanceToNextStep(response.steps[0]?.distance ?? 0);
-      } catch (e) {
+      } catch (e: any) {
         // OSRM demo server is rate-limited and may return 502/503.
         // Non-blocking — the map still shows, just without a route line.
         if (__DEV__) {
