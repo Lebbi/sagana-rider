@@ -96,7 +96,7 @@ function DriverOrderCardView({
       {isAvailable ? (
         <View style={styles.ctaRow}>
           <Pressable
-            style={[styles.ctaPill, styles.ctaPillInactive]}
+            style={[styles.ctaPill, styles.ctaPillActive]}
             onPress={() => onAccept(order.orderId)}
             disabled={acceptInFlight}
             accessibilityRole="button"
@@ -262,7 +262,7 @@ export default function DriverHomepageScreen() {
         setAcceptingOrderId(null);
       }
     },
-    [fetchOrders],
+    [fetchOrders, router],
   );
 
   // Toggle auto-accept

@@ -129,7 +129,7 @@ export default function ActiveDeliveryPage() {
   const dragStartYRef = useRef(SHEET_COLLAPSED_OFFSET);
 
   const allItemsChecked = useMemo(
-    () => checkedItems.every(Boolean),
+    () => checkedItems.length > 0 && checkedItems.every(Boolean),
     [checkedItems],
   );
 
