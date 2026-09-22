@@ -23,7 +23,7 @@ import NativeMapView from "@/features/riders/presentation/components/NativeMapVi
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
-import { getRiderOrderById, updateOrderStatus } from "@/lib/riderOrdersApi";
+import { getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
@@ -53,16 +53,49 @@ export default function ActiveDeliveryPage() {
   const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
   const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
 
-  // When the Active tab is tapped without an orderId param (e.g. after
-  // delivering and returning to Home, then tapping the Active tab),
-  // clear any stale order state so the empty state shows instead of
-  // a delivered order lingering in memory.
+  // When the Active tab is tapped without an orderId param (e.g. rider
+  // taps the Active tab on the nav bar after accepting an order from Home),
+  // fetch the rider's active orders from the API and load the first one.
+  // Previously this just cleared state → "No Active Delivery" even when
+  // the rider had an accepted/in-progress order.
   useFocusEffect(
     useCallback(() => {
-      if (!orderId) {
-        setOrder(null);
-        setIsLoading(false);
-      }
+      if (orderId) return; // orderId param present — useEffect handles it
+
+      let mounted = true;
+      setIsLoading(true);
+      (async () => {
+        try {
+          const orders = await getRiderOrders();
+          if (!mounted) return;
+          const activeStatuses = [
+            "accepted",
+            "to_pickup",
+            "arrived_pickup",
+            "picked_up",
+            "to_delivery",
+            "arrived_delivery",
+          ];
+          const active = orders.find((o) => activeStatuses.includes(o.status));
+          if (active) {
+            setOrder(active);
+            setCheckedItems(active.pickup.items.map(() => false));
+            const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
+            setActivePhase(pickupStatuses.includes(active.status) ? 1 : 2);
+          } else {
+            // No active order — show empty state
+            setOrder(null);
+          }
+        } catch (e) {
+          if (__DEV__) console.warn("[ActiveDelivery] Failed to fetch active order:", e);
+          if (mounted) setOrder(null);
+        } finally {
+          if (mounted) setIsLoading(false);
+        }
+      })();
+      return () => {
+        mounted = false;
+      };
     }, [orderId]),
   );
 
