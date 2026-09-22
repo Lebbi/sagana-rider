@@ -13,6 +13,7 @@ import {
 import { stylesFactory } from "@/features/riders/presentation/styles/index.styles";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { useAutoAccept } from "@/context/AutoAcceptContext";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { useColors } from "@/hooks/useColors";
@@ -162,23 +163,32 @@ export default function DriverHomepageScreen() {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const router = useRouter();
-  const [isOnDuty, setIsOnDuty] = useState(true);
-  const [autoAccept, setAutoAccept] = useState(false);
+  // Auto-accept + duty state now lives in AutoAcceptProvider so the
+  // engine (mounted at tabs layout) reads the same values the rider
+  // toggles here.
+  const {
+    autoAcceptEnabled,
+    setAutoAcceptEnabled,
+    isOnline: isOnDuty,
+    setIsOnline,
+    phase: autoAcceptPhase,
+  } = useAutoAccept();
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [activeOrder, setActiveOrder] = useState<RiderOrder | null>(null);
   const [availableOrders, setAvailableOrders] = useState<RiderOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
 
-  // Fetch rider settings on mount
+  // Fetch rider settings on mount — sync into the shared context so the
+  // auto-accept engine picks them up.
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
         const settings = await getRiderSettings();
         if (!mounted) return;
-        setAutoAccept(settings.autoAccept);
-        setIsOnDuty(settings.isOnline);
+        setAutoAcceptEnabled(settings.autoAccept);
+        setIsOnline(settings.isOnline);
       } catch (e) {
         if (__DEV__) {
           console.warn("[RiderHome] Failed to load settings:", e);
@@ -190,7 +200,7 @@ export default function DriverHomepageScreen() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [setAutoAcceptEnabled, setIsOnline]);
 
   // Fetch orders (also used to refresh after accept)
   const fetchOrders = useCallback(async () => {
@@ -265,31 +275,37 @@ export default function DriverHomepageScreen() {
     [fetchOrders, router],
   );
 
-  // Toggle auto-accept
-  const handleToggleAutoAccept = useCallback(async (value: boolean) => {
-    setAutoAccept(value);
-    try {
-      await updateRiderSettings({ autoAccept: value });
-    } catch (e) {
-      if (__DEV__) {
-        console.warn("[RiderHome] Failed to update auto-accept:", e);
+  // Toggle auto-accept — persist to backend; context state drives the engine
+  const handleToggleAutoAccept = useCallback(
+    async (value: boolean) => {
+      setAutoAcceptEnabled(value);
+      try {
+        await updateRiderSettings({ autoAccept: value });
+      } catch (e) {
+        if (__DEV__) {
+          console.warn("[RiderHome] Failed to update auto-accept:", e);
+        }
+        setAutoAcceptEnabled(!value);
       }
-      setAutoAccept(!value);
-    }
-  }, []);
+    },
+    [setAutoAcceptEnabled],
+  );
 
-  // Toggle on-duty
-  const handleToggleDuty = useCallback(async (value: boolean) => {
-    setIsOnDuty(value);
-    try {
-      await updateRiderSettings({ isOnline: value });
-    } catch (e) {
-      if (__DEV__) {
-        console.warn("[RiderHome] Failed to update online status:", e);
+  // Toggle on-duty — persist to backend; context state drives the engine
+  const handleToggleDuty = useCallback(
+    async (value: boolean) => {
+      setIsOnline(value);
+      try {
+        await updateRiderSettings({ isOnline: value });
+      } catch (e) {
+        if (__DEV__) {
+          console.warn("[RiderHome] Failed to update online status:", e);
+        }
+        setIsOnline(!value);
       }
-      setIsOnDuty(!value);
-    }
-  }, []);
+    },
+    [setIsOnline],
+  );
 
   // Destination for the mini-map — from active order or default center
   const mapDestination: GeoPoint = activeOrder
@@ -340,16 +356,20 @@ export default function DriverHomepageScreen() {
               <View>
                 <Text style={styles.autoAcceptTitle}>Auto-Accept Orders</Text>
                 <Text style={styles.autoAcceptDesc}>
-                  Automatically accept incoming delivery orders
+                  {autoAcceptPhase === "countdown"
+                    ? "Accepting an order…"
+                    : autoAcceptPhase === "scanning" && autoAcceptEnabled && isOnDuty
+                      ? "Auto-accept active — scanning for orders"
+                      : "Automatically accept incoming delivery orders"}
                 </Text>
               </View>
             </View>
             <Switch
-              value={autoAccept}
+              value={autoAcceptEnabled}
               onValueChange={handleToggleAutoAccept}
               disabled={isLoadingSettings}
               trackColor={{ false: colors.border, true: "#6FB48E" }}
-              thumbColor={autoAccept ? colors.success : colors.backgroundMuted}
+              thumbColor={autoAcceptEnabled ? colors.success : colors.backgroundMuted}
               ios_backgroundColor={colors.border}
               style={styles.dutySwitch}
             />

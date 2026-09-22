@@ -56,23 +56,9 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       position: "absolute",
       bottom: 0,
       height: 3,
-      width: "25%",
+      width: "20%",
       backgroundColor: colors.success,
-    },
-    tabsIndicatorAll: {
-      left: "0%",
-    },
-    tabsIndicatorNew: {
-      left: "25%",
-    },
-    tabsIndicatorProcessing: {
-      left: "50%",
-    },
-    tabsIndicatorDelivered: {
-      left: "75%",
-    },
-    tabsIndicatorPasabay: {
-      left: "80%",
+      borderRadius: 2,
     },
     content: {
       padding: 14,

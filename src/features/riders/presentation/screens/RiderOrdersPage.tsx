@@ -7,7 +7,7 @@
  * @see docs/maps-implementation-plan.md
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
@@ -86,6 +86,20 @@ export default function RiderOrdersPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<OrderTab>("All");
 
+  // Measured tab geometry for the underline indicator. The old hardcoded
+  // percentages (25% steps from a 4-tab layout) drifted under the wrong
+  // labels — measuring each button on layout keeps the indicator exactly
+  // centered under the active tab regardless of label widths.
+  const tabLayoutsRef = useRef<Record<string, { x: number; width: number }>>({});
+  const [tabLayouts, setTabLayouts] = useState<
+    Record<string, { x: number; width: number }>
+  >({});
+  const indicatorWidth = scale(28);
+  const activeLayout = tabLayouts[activeTab];
+  const indicatorLeft = activeLayout
+    ? activeLayout.x + (activeLayout.width - indicatorWidth) / 2
+    : 0;
+
   const [orders, setOrders] = useState<RiderOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -131,15 +145,8 @@ export default function RiderOrdersPage() {
     if (activeTab === "Delivered") {
       return orders.filter((o) => mapStatusToTab(o.status) === "completed");
     }
-    return []; // Pasabay tab renders batches, not orders
+    return []; // Pasabay tab renders Coming Soon, not orders
   }, [orders, activeTab]);
-
-  const handleAcceptBatch = () => {
-    router.push({
-      pathname: "/tabs/(riders)/PasabayNavigationScreen",
-      params: { batchId: "current" },
-    } as any);
-  };
 
   const renderStatusChip = (status: DeliveryStatus) => {
     const tab = mapStatusToTab(status);
@@ -178,6 +185,11 @@ export default function RiderOrdersPage() {
               <Pressable
                 key={tab}
                 style={styles.tabButton}
+                onLayout={(e) => {
+                  const { x, width } = e.nativeEvent.layout;
+                  tabLayoutsRef.current[tab] = { x, width };
+                  setTabLayouts({ ...tabLayoutsRef.current });
+                }}
                 onPress={() => setActiveTab(tab)}
                 accessibilityRole="button"
                 accessibilityLabel={`Show ${tab} orders`}
@@ -198,16 +210,11 @@ export default function RiderOrdersPage() {
           <View
             style={[
               styles.tabsIndicator,
-              { width: "20%" },
-              activeTab === "All"
-                ? styles.tabsIndicatorAll
-                : activeTab === "New"
-                  ? styles.tabsIndicatorNew
-                  : activeTab === "Processing"
-                    ? styles.tabsIndicatorProcessing
-                    : activeTab === "Delivered"
-                      ? styles.tabsIndicatorDelivered
-                      : styles.tabsIndicatorPasabay,
+              {
+                width: indicatorWidth,
+                left: indicatorLeft,
+                opacity: activeLayout ? 1 : 0,
+              },
             ]}
           />
         </View>
@@ -264,47 +271,21 @@ export default function RiderOrdersPage() {
             </View>
           )}
 
-          {/* Pasabay tab — batch acceptance */}
+          {/* Pasabay tab — Coming Soon (no backend batch model yet) */}
           {activeTab === "Pasabay" && (
-            <View style={styles.card}>
-              <View style={styles.cardTopRow}>
-                <Text style={styles.orderText}>Pasabay Multi-Drop</Text>
-                <View style={[styles.statusChip, styles.statusChipNew]}>
-                  <Text style={styles.statusChipText}>AVAILABLE</Text>
-                </View>
-              </View>
-
-              <View style={batchStyles.infoRow}>
-                <MaterialIcons
-                  name={IconTheme.infoCircle}
-                  size={scale(16)}
-                  color={colors.primary}
-                />
-                <Text
-                  style={[batchStyles.infoText, { color: colors.textMuted }]}
-                >
-                  Accept a multi-order batch and the system will optimize your
-                  route through all pickup and delivery stops.
-                </Text>
-              </View>
-
-              <View style={styles.cardDivider} />
-
-              <Pressable
-                style={batchStyles.acceptButton}
-                onPress={handleAcceptBatch}
-                accessibilityRole="button"
-                accessibilityLabel="Accept pasabay batch"
-              >
-                <MaterialIcons
-                  name={IconTheme.checkCircle}
-                  size={scale(18)}
-                  color={colors.white}
-                />
-                <Text style={batchStyles.acceptButtonText}>
-                  Find & Accept Batch
-                </Text>
-              </Pressable>
+            <View style={batchStyles.comingSoon}>
+              <MaterialIcons
+                name={IconTheme.truck}
+                size={scale(44)}
+                color={colors.textMuted}
+              />
+              <Text style={batchStyles.comingSoonTitle}>
+                Pasabay Multi-Drop
+              </Text>
+              <Text style={batchStyles.comingSoonText}>
+                Batch deliveries with multiple farm stops in one run —
+                coming soon.
+              </Text>
             </View>
           )}
 
@@ -390,35 +371,26 @@ const stateStyles = StyleSheet.create({
 });
 
 // ============================================================
-// Pasabay batch card styles
+// Pasabay Coming Soon styles
 // ============================================================
 
 const batchStyles = StyleSheet.create({
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    marginTop: 10,
-  },
-  infoText: {
-    fontSize: 12,
-    fontFamily: fontFamily.regular,
-    flex: 1,
-    lineHeight: 18,
-  },
-  acceptButton: {
-    flexDirection: "row",
+  comingSoon: {
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#396B5C",
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 12,
+    gap: 10,
+    paddingVertical: 48,
+    paddingHorizontal: 24,
   },
-  acceptButtonText: {
-    fontSize: 14,
-    fontFamily: fontFamily.semiBold,
-    color: "#fff",
+  comingSoonTitle: {
+    fontSize: 15,
+    fontFamily: fontFamily.bold,
+    color: "#396B5C",
+  },
+  comingSoonText: {
+    fontSize: 12,
+    fontFamily: fontFamily.regular,
+    textAlign: "center",
+    lineHeight: 18,
   },
 });
