@@ -5,7 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 
 export default function RiderWalletPage() {
   const colors = useColors();
@@ -13,23 +14,28 @@ export default function RiderWalletPage() {
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const data = await getRiderWallet();
-        if (!mounted) return;
-        setWallet(data);
-      } catch (e) {
-        if (__DEV__) console.warn("[RiderWallet] Failed to fetch:", e);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // useFocusEffect re-fetches whenever the rider returns to this tab
+  // (e.g. after completing a delivery) — useEffect only ran on mount.
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      setIsLoading(true);
+      (async () => {
+        try {
+          const data = await getRiderWallet();
+          if (!mounted) return;
+          setWallet(data);
+        } catch (e) {
+          if (__DEV__) console.warn("[RiderWallet] Failed to fetch:", e);
+        } finally {
+          if (mounted) setIsLoading(false);
+        }
+      })();
+      return () => {
+        mounted = false;
+      };
+    }, []),
+  );
 
   const weeklyEarnings = wallet?.weekly_earnings ?? [];
   const highestBarValue = Math.max(
@@ -98,17 +104,17 @@ export default function RiderWalletPage() {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Recent Payouts</Text>
+            <Text style={styles.cardTitle}>Recent Earnings</Text>
             {isLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
-            ) : (wallet?.recent_payouts ?? []).length > 0 ? (
-              (wallet?.recent_payouts ?? []).map((payout, idx) => (
+            ) : (wallet?.recent_earnings ?? []).length > 0 ? (
+              (wallet?.recent_earnings ?? []).map((earning, idx) => (
                 <Text key={idx} style={styles.cardText}>
-                  {payout.date} - {formatPeso(payout.amount)}
+                  {earning.date} - {formatPeso(earning.amount)}
                 </Text>
               ))
             ) : (
-              <Text style={styles.cardText}>No payouts yet</Text>
+              <Text style={styles.cardText}>No earnings yet</Text>
             )}
           </View>
         </ScrollView>

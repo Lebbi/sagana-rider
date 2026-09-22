@@ -27,7 +27,12 @@ export interface RiderWalletData {
   pending_balance: number;
   total_earnings: number;
   weekly_earnings: { day: string; value: number }[];
-  recent_payouts: { date: string; amount: number; order_id: number | null }[];
+  recent_earnings: {
+    date: string;
+    amount: number;
+    order_id: number | null;
+    description: string;
+  }[];
 }
 
 export async function getRiderProfile(): Promise<RiderProfileData> {
