@@ -23,6 +23,8 @@ import {
     useState,
 } from "react";
 
+import { useRouter } from "expo-router";
+
 import { secureStorage } from "../utils/secureStorage";
 
 export type RiderInfo = {
@@ -60,6 +62,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUserState] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -223,8 +226,17 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
         "user_id",
       ]);
       setUserState(null);
+
+      // Redirect to login screen — without navigation the user is stuck
+      // on the protected profile tab after the alert is dismissed.
+      try {
+        router.replace("/login" as never);
+      } catch (navError) {
+        if (__DEV__)
+          console.warn("⚠️ UserContext: Failed to navigate to login", navError);
+      }
     }
-  }, []);
+  }, [router]);
 
   const value = useMemo(
     () => ({
