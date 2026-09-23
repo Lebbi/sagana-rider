@@ -230,17 +230,19 @@ api.interceptors.response.use(
       }
     }
 
-    // Log errors
-    try {
-      console.log(
-        `[API][ERROR] ${method} ${url} -> ${status || "NETWORK_ERROR"}`,
-        {
-          message: error?.message,
-          code: error?.code,
-          networkError: isNetworkError,
-        },
-      );
-    } catch {}
+    // Log errors — dev only (D2 finding 7: was not __DEV__ gated)
+    if (__DEV__) {
+      try {
+        console.log(
+          `[API][ERROR] ${method} ${url} -> ${status || "NETWORK_ERROR"}`,
+          {
+            message: error?.message,
+            code: error?.code,
+            networkError: isNetworkError,
+          },
+        );
+      } catch {}
+    }
 
     // Handle 401 errors
     if (error.response?.status === 401) {

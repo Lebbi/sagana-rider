@@ -41,12 +41,14 @@ export const secureStorage = {
     try {
       if (await isSecureStoreAvailable()) {
         await SecureStore.setItemAsync(key, value);
-        // Mirror to AsyncStorage as a backup so we can still recover if the
-        // keychain is wiped (e.g. user resets device biometrics)
-        await AsyncStorage.setItem(PREFIX + key, value);
+        // Do NOT mirror to AsyncStorage — tokens must stay in SecureStore only.
+        // (D2 finding 5: the old mirror defeated the purpose of SecureStore.)
         return;
       }
     } catch {}
+    // SecureStore unavailable (Expo Go / web) — AsyncStorage fallback only.
+    // On a standalone APK, SecureStore is always available, so this path
+    // is dev-only and never runs in production.
     await AsyncStorage.setItem(PREFIX + key, value);
   },
 
