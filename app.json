@@ -57,7 +57,8 @@
       "expo-image",
       "expo-image-picker",
       "expo-secure-store",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-asset"
     ],
     "splash": {
       "image": "./assets/branding/sagana-wordform-logo.png",
