@@ -88,7 +88,10 @@ export default function ActiveDeliveryPage() {
           }
         } catch (e) {
           if (__DEV__) console.warn("[ActiveDelivery] Failed to fetch active order:", e);
-          if (mounted) setOrder(null);
+          // Network failure — keep whatever state we had rather than
+          // rendering the empty state. A rider with a live delivery must
+          // never see "No Active Delivery" because one fetch failed.
+          // Next focus retries.
         } finally {
           if (mounted) setIsLoading(false);
         }

@@ -136,7 +136,8 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
   // Refs so the async loops always read current values without re-subscribing
   const appStateRef = useRef(AppState.currentState);
   const skipSetRef = useRef<Set<number>>(new Set());
-  const busyRef = useRef(false); // guards against overlapping scans/accepts
+  const busyRef = useRef(false); // guards against overlapping scans
+  const acceptingRef = useRef(false); // guards against poll tick during in-flight accept
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef<AutoAcceptPhase>("idle");
@@ -154,6 +155,7 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
   // ── Accept ───────────────────────────────────────────────────
   const performAccept = useCallback(
     async (orderId: number) => {
+      acceptingRef.current = true;
       try {
         await acceptOrder(orderId);
         handleApiSuccess("Order Auto-Accepted", "The order is now yours to deliver.");
@@ -166,16 +168,18 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
       } catch (e: any) {
         const status = e?.response?.status;
         if (status === 422) {
-          // Race lost — another rider took it. Silent skip; keep scanning.
+          // Race lost — another rider took it. Permanent skip; keep scanning.
           skipSetRef.current.add(orderId);
           setPhaseSafe("scanning");
         } else {
-          // Network/backend error — back off; next poll retries
+          // Transient failure (network/5xx/401) — do NOT skip the order.
+          // The next poll retries it. Only permanent rejections (422) and
+          // explicit "Not now" taps enter the skip-set.
           handleApiError(e, "Auto-accept failed. Will retry.");
-          skipSetRef.current.add(orderId);
           setPhaseSafe("scanning");
         }
       } finally {
+        acceptingRef.current = false;
         setPending(null);
         setSecondsLeft(0);
       }
@@ -235,6 +239,7 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
     const settings = settingsRef.current;
     if (
       busyRef.current ||
+      acceptingRef.current ||
       phaseRef.current === "countdown" ||
       !settings.autoAcceptEnabled ||
       !settings.isOnline ||
