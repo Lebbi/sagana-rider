@@ -181,6 +181,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       paddingHorizontal: 14,
       paddingTop: 10,
       paddingBottom: 12,
+      marginBottom: 10,
     },
     orderTopRow: {
       flexDirection: "row",
@@ -284,8 +285,8 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       backgroundColor: colors.error,
     },
     ctaText: {
-      fontFamily: fontFamily.bold,
-      fontWeight: fontWeight.bold,
+      fontFamily: fontFamily.semiBold,
+      fontWeight: fontWeight.semiBold,
       fontSize: 10,
       letterSpacing: 0.5,
     },

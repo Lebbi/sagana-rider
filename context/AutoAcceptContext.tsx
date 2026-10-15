@@ -99,16 +99,25 @@ export const useAutoAccept = () => {
  * any tab. Whole chip is tappable = "Not now" (≥44pt target).
  */
 export function AutoAcceptBanner() {
-  const { phase, secondsLeft, pending, cancelCountdown } = useAutoAccept();
+  const { phase, secondsLeft, pending, cancelCountdown, setAutoAcceptEnabled } =
+    useAutoAccept();
   const colors = useColors();
 
   if (phase !== "countdown" || !pending) return null;
+
+  const handleNotNow = () => {
+    cancelCountdown();
+    // Turning the toggle off matches rider intent: "Not now" = stop
+    // auto-accepting. Without this the switch stays on and the engine
+    // immediately starts scanning for the next order.
+    setAutoAcceptEnabled(false);
+  };
 
   return (
     <View style={styles.bannerWrap} pointerEvents="box-none">
       <Pressable
         style={[styles.banner, { backgroundColor: colors.success }]}
-        onPress={cancelCountdown}
+        onPress={handleNotNow}
         accessibilityRole="button"
         accessibilityLabel={`Cancel auto accept of order ${pending.orderId}`}
       >
@@ -118,7 +127,9 @@ export function AutoAcceptBanner() {
         <Text style={styles.bannerSub}>
           Order #{pending.orderId} — tap to skip
         </Text>
-        <Text style={styles.bannerNotNow}>NOT NOW</Text>
+        <View style={styles.notNowButton}>
+          <Text style={styles.bannerNotNow}>NOT NOW</Text>
+        </View>
       </Pressable>
     </View>
   );
@@ -386,11 +397,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   bannerNotNow: {
-    color: "rgba(255, 255, 255, 0.95)",
+    color: "#22A06B",
     fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     fontSize: 11,
-    marginTop: 6,
     letterSpacing: 0.5,
+  },
+  notNowButton: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
   },
 });

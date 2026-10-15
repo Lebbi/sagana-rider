@@ -141,7 +141,13 @@ export default function RiderProfile() {
           <View style={styles.headerSurface}>
             <TouchableOpacity
               style={styles.menuButton}
-              onPress={() => null}
+              onPress={() =>
+                Alert.alert(
+                  "Menu",
+                  "Profile menu is coming soon.",
+                  [{ text: "OK" }],
+                )
+              }
               accessibilityRole="button"
               accessibilityLabel="Open profile menu"
             >
@@ -219,11 +225,23 @@ export default function RiderProfile() {
           <View style={styles.garageWrap}>
             <View style={styles.garageHeaderRow}>
               <Text style={styles.garageTitle}>Garage</Text>
-              <MaterialIcons
-                name={IconTheme.more}
-                size={18}
-                color={colors.textMuted}
-              />
+              <TouchableOpacity
+                onPress={() =>
+                  Alert.alert(
+                    "Garage",
+                    "Vehicle management is coming soon.",
+                    [{ text: "OK" }],
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Garage options"
+              >
+                <MaterialIcons
+                  name={IconTheme.more}
+                  size={18}
+                  color={colors.textMuted}
+                />
+              </TouchableOpacity>
             </View>
 
             <ScrollView
@@ -299,9 +317,15 @@ export default function RiderProfile() {
           <View style={styles.sectionCard}>
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() => null}
+              onPress={() =>
+                Alert.alert(
+                  "Edit Profile",
+                  "Profile editing is coming soon.",
+                  [{ text: "OK" }],
+                )
+              }
               accessibilityRole="button"
-              accessibilityLabel="Edit profile (coming soon)"
+              accessibilityLabel="Edit profile"
             >
               <View style={styles.settingLeft}>
                 <View style={styles.settingIconCircle}>
