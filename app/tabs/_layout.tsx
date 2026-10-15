@@ -30,6 +30,7 @@ export default function RiderTabsLayout() {
         <Tabs.Screen name="RiderOrdersPage" options={{ title: "Orders" }} />
         <Tabs.Screen name="RiderWalletPage" options={{ title: "Wallet" }} />
         <Tabs.Screen name="RiderProfile" options={{ title: "Profile" }} />
+        <Tabs.Screen name="EditProfilePage" options={{ href: null, title: "Edit Profile" }} />
       </Tabs>
       {/* Countdown chip — fixed above the tab bar, visible from any tab */}
       <AutoAcceptBanner />

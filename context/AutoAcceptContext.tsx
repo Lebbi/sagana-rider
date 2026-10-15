@@ -99,38 +99,34 @@ export const useAutoAccept = () => {
  * any tab. Whole chip is tappable = "Not now" (≥44pt target).
  */
 export function AutoAcceptBanner() {
-  const { phase, secondsLeft, pending, cancelCountdown, setAutoAcceptEnabled } =
-    useAutoAccept();
+  const { phase, secondsLeft, pending, cancelCountdown, setAutoAcceptEnabled } = useAutoAccept();
   const colors = useColors();
 
   if (phase !== "countdown" || !pending) return null;
 
   const handleNotNow = () => {
     cancelCountdown();
-    // Turning the toggle off matches rider intent: "Not now" = stop
-    // auto-accepting. Without this the switch stays on and the engine
-    // immediately starts scanning for the next order.
     setAutoAcceptEnabled(false);
   };
 
   return (
     <View style={styles.bannerWrap} pointerEvents="box-none">
-      <Pressable
-        style={[styles.banner, { backgroundColor: colors.success }]}
-        onPress={handleNotNow}
-        accessibilityRole="button"
-        accessibilityLabel={`Cancel auto accept of order ${pending.orderId}`}
-      >
+      <View style={[styles.banner, { backgroundColor: colors.success }]}>
         <Text style={styles.bannerTitle}>
           AUTO ACCEPTING AFTER {secondsLeft}s
         </Text>
         <Text style={styles.bannerSub}>
-          Order #{pending.orderId} — tap to skip
+          Order #{pending.orderId}
         </Text>
-        <View style={styles.notNowButton}>
-          <Text style={styles.bannerNotNow}>NOT NOW</Text>
-        </View>
-      </Pressable>
+        <Pressable
+          style={styles.notNowButton}
+          onPress={handleNotNow}
+          accessibilityRole="button"
+          accessibilityLabel="Not now — turn off auto accept and skip this order"
+        >
+          <Text style={[styles.notNowText, { color: colors.success }]}>NOT NOW</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -396,19 +392,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  bannerNotNow: {
-    color: "#22A06B",
+  notNowButton: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    minHeight: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notNowText: {
     fontFamily: fontFamily.bold,
     fontWeight: fontWeight.bold,
     fontSize: 11,
     letterSpacing: 0.5,
-  },
-  notNowButton: {
-    alignSelf: "flex-start",
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: "#FFFFFF",
   },
 });

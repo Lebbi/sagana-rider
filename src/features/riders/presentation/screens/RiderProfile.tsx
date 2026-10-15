@@ -3,12 +3,14 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Modal,
     Pressable,
     ScrollView,
     Switch,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -18,7 +20,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import { useUser } from "@/context/UserContext";
-import { getRiderProfile, type RiderProfileData } from "@/lib/riderProfileApi";
+import { getRiderProfile, updateRiderProfile, type RiderProfileData, type VehicleType } from "@/lib/riderProfileApi";
 
 interface SelectionOption {
   id: string;
@@ -95,6 +97,13 @@ export default function RiderProfile() {
   const [isTextSizeModalVisible, setIsTextSizeModalVisible] = useState(false);
   const [profileData, setProfileData] = useState<RiderProfileData | null>(null);
 
+  // Garage edit modal state
+  const [isGarageModalVisible, setIsGarageModalVisible] = useState(false);
+  const [garageVehicleType, setGarageVehicleType] = useState<VehicleType>("motorcycle");
+  const [garagePlate, setGaragePlate] = useState("");
+  const [garageLicense, setGarageLicense] = useState("");
+  const [isGarageSaving, setIsGarageSaving] = useState(false);
+
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -112,6 +121,30 @@ export default function RiderProfile() {
   }, []);
 
   const vehicles = useMemo(() => buildVehicles(profileData), [profileData]);
+
+  const handleOpenGarage = () => {
+    setGarageVehicleType((profileData?.vehicle_type as VehicleType) ?? "motorcycle");
+    setGaragePlate(profileData?.vehicle_plate_number ?? "");
+    setGarageLicense(profileData?.license_number ?? "");
+    setIsGarageModalVisible(true);
+  };
+
+  const handleSaveGarage = async () => {
+    setIsGarageSaving(true);
+    try {
+      const updated = await updateRiderProfile({
+        vehicle_type: garageVehicleType,
+        vehicle_plate_number: garagePlate.trim() || null,
+        license_number: garageLicense.trim() || null,
+      });
+      setProfileData(updated);
+      setIsGarageModalVisible(false);
+    } catch (e: any) {
+      Alert.alert("Error", "Failed to save vehicle info. Please try again.");
+    } finally {
+      setIsGarageSaving(false);
+    }
+  };
 
   const activeVehicle = useMemo(
     () => vehicles[activeVehicleIndex] ?? vehicles[0],
@@ -139,24 +172,7 @@ export default function RiderProfile() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.headerSurface}>
-            <TouchableOpacity
-              style={styles.menuButton}
-              onPress={() =>
-                Alert.alert(
-                  "Menu",
-                  "Profile menu is coming soon.",
-                  [{ text: "OK" }],
-                )
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Open profile menu"
-            >
-              <MaterialIcons
-                name={IconTheme.menu}
-                size={20}
-                color={colors.textDark}
-              />
-            </TouchableOpacity>
+            {/* Burger menu removed — settings list below covers everything */}
 
             <View style={styles.avatarWithBadge}>
               <Image
@@ -225,23 +241,17 @@ export default function RiderProfile() {
           <View style={styles.garageWrap}>
             <View style={styles.garageHeaderRow}>
               <Text style={styles.garageTitle}>Garage</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  Alert.alert(
-                    "Garage",
-                    "Vehicle management is coming soon.",
-                    [{ text: "OK" }],
-                  )
-                }
+              <Pressable
+                onPress={handleOpenGarage}
                 accessibilityRole="button"
-                accessibilityLabel="Garage options"
+                accessibilityLabel="Edit vehicle details"
               >
                 <MaterialIcons
                   name={IconTheme.more}
                   size={18}
                   color={colors.textMuted}
                 />
-              </TouchableOpacity>
+              </Pressable>
             </View>
 
             <ScrollView
@@ -317,13 +327,7 @@ export default function RiderProfile() {
           <View style={styles.sectionCard}>
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() =>
-                Alert.alert(
-                  "Edit Profile",
-                  "Profile editing is coming soon.",
-                  [{ text: "OK" }],
-                )
-              }
+              onPress={() => router.push("/tabs/EditProfilePage" as never)}
               accessibilityRole="button"
               accessibilityLabel="Edit profile"
             >
@@ -722,6 +726,95 @@ export default function RiderProfile() {
                 );
               })}
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Garage edit modal — vehicle info only (no overlap with Edit Profile) */}
+      <Modal
+        visible={isGarageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsGarageModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsGarageModalVisible(false)}
+        >
+          <Pressable style={styles.modalSheet} onPress={() => null}>
+            <Text style={styles.modalTitle}>Edit Vehicle</Text>
+
+            {/* Vehicle type chips */}
+            <Text style={styles.garageModalLabel}>Vehicle Type</Text>
+            <View style={styles.garageModalChipsRow}>
+              {[
+                { value: "motorcycle", label: "Motorcycle" },
+                { value: "scooter", label: "Scooter" },
+                { value: "car", label: "Car" },
+                { value: "bicycle", label: "Bicycle" },
+                { value: "tricycle", label: "Tricycle" },
+              ].map((opt) => {
+                const isSelected = garageVehicleType === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    style={[
+                      styles.garageModalChip,
+                      isSelected ? styles.garageModalChipActive : null,
+                    ]}
+                    onPress={() => setGarageVehicleType(opt.value as VehicleType)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select ${opt.label}`}
+                  >
+                    <Text
+                      style={[
+                        styles.garageModalChipText,
+                        isSelected ? styles.garageModalChipTextActive : null,
+                      ]}
+                    >
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Plate number */}
+            <Text style={styles.garageModalLabel}>Plate Number</Text>
+            <TextInput
+              style={styles.garageModalInput}
+              value={garagePlate}
+              onChangeText={setGaragePlate}
+              placeholder="ABC-1234"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="characters"
+            />
+
+            {/* License number */}
+            <Text style={styles.garageModalLabel}>License Number</Text>
+            <TextInput
+              style={styles.garageModalInput}
+              value={garageLicense}
+              onChangeText={setGarageLicense}
+              placeholder="LIC-00000"
+              placeholderTextColor={colors.textMuted}
+              autoCapitalize="characters"
+            />
+
+            {/* Save button */}
+            <Pressable
+              style={[styles.garageModalSave, isGarageSaving ? { opacity: 0.6 } : null]}
+              onPress={handleSaveGarage}
+              disabled={isGarageSaving}
+              accessibilityRole="button"
+              accessibilityLabel="Save vehicle details"
+            >
+              {isGarageSaving ? (
+                <ActivityIndicator size="small" color={colors.white} />
+              ) : (
+                <Text style={styles.garageModalSaveText}>Save Vehicle</Text>
+              )}
+            </Pressable>
           </Pressable>
         </Pressable>
       </Modal>

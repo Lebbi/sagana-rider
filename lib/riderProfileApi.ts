@@ -44,3 +44,20 @@ export async function getRiderWallet(): Promise<RiderWalletData> {
   const { data } = await api.get<RiderWalletData>("/rider/wallet");
   return data;
 }
+
+export type VehicleType = "motorcycle" | "scooter" | "car" | "bicycle" | "tricycle";
+
+export interface UpdateRiderProfilePayload {
+  name?: string;
+  phone_number?: string | null;
+  vehicle_type?: VehicleType;
+  vehicle_plate_number?: string | null;
+  license_number?: string | null;
+}
+
+export async function updateRiderProfile(
+  payload: UpdateRiderProfilePayload,
+): Promise<RiderProfileData> {
+  const { data } = await api.patch<RiderProfileData>("/rider/profile", payload);
+  return data;
+}
