@@ -4,7 +4,7 @@
     "slug": "sagana-rider",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/branding/sagana-icon-logo.png",
+    "icon": "./assets/branding/official_sagana_logo.png",
     "scheme": "saganarider",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
@@ -24,7 +24,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/branding/sagana-icon-logo.png",
+        "foregroundImage": "./assets/branding/official_sagana_logo.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.sagana.rider",
@@ -40,7 +40,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/branding/sagana-icon-logo.png"
+      "favicon": "./assets/branding/official_sagana_logo.png"
     },
     "plugins": [
       "expo-router",
@@ -58,7 +58,8 @@
       "expo-image-picker",
       "expo-secure-store",
       "expo-status-bar",
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withGoogleMapsKey"
     ],
     "splash": {
       "image": "./assets/branding/sagana-wordform-logo.png",
