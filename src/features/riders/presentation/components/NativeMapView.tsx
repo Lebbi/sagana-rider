@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   map: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   markerContainer: {
     alignItems: "center",
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   loadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255,255,255,0.85)",
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   errorOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",

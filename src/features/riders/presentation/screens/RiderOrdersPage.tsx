@@ -294,7 +294,13 @@ export default function RiderOrdersPage() {
             !error &&
             activeTab !== "Pasabay" &&
             visibleOrders.map((order) => (
-              <View key={order.orderId} style={styles.card}>
+              <Pressable
+                key={order.orderId}
+                style={styles.card}
+                onPress={() => router.push(`/rider/orders/${order.orderId}` as never)}
+                accessibilityRole="button"
+                accessibilityLabel={`View order ${order.orderNumber} details`}
+              >
                 <View style={styles.cardTopRow}>
                   <Text style={styles.orderText}>
                     Order {order.orderNumber}
@@ -308,7 +314,7 @@ export default function RiderOrdersPage() {
                 <Text style={styles.shippingText}>
                   Shipping Fee: ₱{order.shippingFee.toFixed(2)}
                 </Text>
-              </View>
+              </Pressable>
             ))}
 
           {/* Empty state */}

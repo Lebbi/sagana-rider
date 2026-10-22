@@ -23,13 +23,66 @@ import NativeMapView from "@/features/riders/presentation/components/NativeMapVi
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
-import { getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
+import { cancelOrder, getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
+import type { CancelReason } from "@/lib/riderOrdersApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
 const SHEET_COLLAPSED_OFFSET = 380;
 const SHEET_EXPANDED_OFFSET = 110;
 const DRAG_DISMISS_THRESHOLD = 64;
+
+const CANCEL_REASONS: { value: CancelReason; label: string }[] = [
+  { value: "vehicle_breakdown", label: "Vehicle Breakdown" },
+  { value: "unreachable_contact", label: "Unreachable Farmer/Buyer" },
+  { value: "emergency", label: "Emergency" },
+  { value: "other", label: "Other" },
+];
+
+/**
+ * Formats an OrderItem for display: "Product Name - Quantity Unit"
+ * e.g., "Ampalaya - 2 kg" or "Talom (Premium) - 10 kg"
+ */
+function formatOrderItem(item: { productName: string; variationName?: string; quantity: number; unit: string; weightKg?: number }): string {
+  const nameParts = [item.productName];
+  if (item.variationName) nameParts.push(`(${item.variationName})`);
+  // Use weightKg if available (more precise), otherwise quantity
+  const qty = item.weightKg ?? item.quantity;
+  const unit = item.unit.toLowerCase() === "kg" ? "kg" : item.unit;
+  return `${nameParts.join(" ")} - ${qty} ${unit}`;
+}
+
+/**
+ * Resolves farmer/seller name with fallback chain per spec:
+ * shop_name -> business_name -> name -> farm_name -> 'Farmer'
+ * Handles both camelCase and snake_case from API.
+ */
+function resolveFarmerName(pickup: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
+  return (
+    pickup.farmerName
+    ?? pickup.shopName
+    ?? pickup.businessName
+    ?? pickup.name
+    ?? pickup.farmName
+    ?? "Farmer"
+  );
+}
+
+/**
+ * Resolves pickup address with fallback.
+ * Uses full address if available, otherwise barangay + city.
+ */
+function resolvePickupAddress(pickup: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
+  const addr = pickup.address;
+  if (addr && (addr.street || addr.barangay || addr.city || addr.province)) {
+    return [addr.street, addr.barangay, addr.city, addr.province].filter(Boolean).join(", ");
+  }
+  // Fallback to seller-level barangay/city
+  if (pickup.barangay || pickup.city) {
+    return [pickup.barangay, pickup.city].filter(Boolean).join(", ");
+  }
+  return "Address pending";
+}
 
 export default function ActiveDeliveryPage() {
   const router = useRouter();
@@ -44,6 +97,8 @@ export default function ActiveDeliveryPage() {
   const [activePhase, setActivePhase] = useState<1 | 2>(1);
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   const [isSyncingStatus, setIsSyncingStatus] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedCancelReason, setSelectedCancelReason] = useState<CancelReason | "">("");
   const hasCompletedPhaseOneRef = useRef(false);
 
   // Proof photos: base64 strings sent to backend on status update.
@@ -356,9 +411,37 @@ export default function ActiveDeliveryPage() {
     }
   }, [numericOrderId, router, deliveryPhotos]);
 
+  // Cancel delivery — calls backend to cancel/unassign, resets rider to available
+  const handleCancelDelivery = useCallback(async () => {
+    if (!selectedCancelReason || !order) return;
+    const id = order.orderId;
+    setIsSyncingStatus(true);
+    try {
+      await cancelOrder(id, selectedCancelReason as CancelReason);
+      handleApiSuccess(
+        "Delivery Cancelled",
+        "The order has been released back to the available pool.",
+      );
+      setShowCancelModal(false);
+      setSelectedCancelReason("");
+      router.replace("/tabs" as never);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      const msg = e?.response?.data?.message;
+      handleApiError(
+        e,
+        status === 422
+          ? msg ?? "Could not cancel the delivery. Try again."
+          : "Could not cancel the delivery. Check your connection and try again.",
+      );
+    } finally {
+      setIsSyncingStatus(false);
+    }
+  }, [order, router, selectedCancelReason]);
+
   const isPhaseOne = activePhase === 1;
   const headerName = isPhaseOne
-    ? (order?.pickup.farmerName ?? "Farmer")
+    ? resolveFarmerName(order?.pickup as any)
     : (order?.delivery.buyerName ?? "Buyer");
   const headerNumber = isPhaseOne
     ? (order?.pickup.farmerPhone ?? "")
@@ -457,6 +540,18 @@ export default function ActiveDeliveryPage() {
               <Text style={styles.topBarNumber}>{headerNumber}</Text>
             </View>
             <View style={styles.topBarActions}>
+              <Pressable
+                style={styles.headerActionButton}
+                onPress={() => setShowCancelModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel delivery"
+              >
+                <MaterialIcons
+                  name={IconTheme.closeCircle}
+                  size={21}
+                  color="#BA1A1A"
+                />
+              </Pressable>
               <Pressable style={styles.headerActionButton}>
                 <MaterialIcons
                   name={IconTheme.phone}
@@ -556,7 +651,7 @@ export default function ActiveDeliveryPage() {
                 <Text style={styles.badgeText}>Current Pickup</Text>
               </View>
               <Text style={styles.mainTargetName}>
-                {order?.pickup.farmerName ?? "Farmer"}
+                {resolveFarmerName(order?.pickup as any)}
               </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
@@ -566,14 +661,7 @@ export default function ActiveDeliveryPage() {
                 />
                 <Text style={styles.baseText}>
                   {isPhaseOne
-                    ? [
-                        order?.pickup.address.street,
-                        order?.pickup.address.barangay,
-                        order?.pickup.address.city,
-                        order?.pickup.address.province,
-                      ]
-                        .filter(Boolean)
-                        .join(", ")
+                    ? resolvePickupAddress(order?.pickup as any)
                     : [
                         order?.delivery.address.street,
                         order?.delivery.address.barangay,
@@ -588,7 +676,7 @@ export default function ActiveDeliveryPage() {
               <Text style={styles.sectionLabel}>ITEMS TO COLLECT</Text>
               <View style={styles.checkboxGroup}>
                 {(order?.pickup.items ?? []).map((item, index) => {
-                  const itemLabel = `${item.productName}${item.variationName ? `, ${item.variationName}` : ""}, ${item.quantity} ${item.unit}${item.weightKg ? `, ${item.weightKg} kg` : ""}`;
+                  const itemLabel = formatOrderItem(item);
                   return (
                     <Pressable
                       key={index}
@@ -856,6 +944,79 @@ export default function ActiveDeliveryPage() {
             <Text style={styles.phaseTransitionText}>
               {activePhase === 1 ? "Completing pickup..." : "Completing delivery..."}
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel Delivery Confirmation Modal */}
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.cancelModalOverlay}>
+          <View style={styles.cancelModalCard}>
+            <Text style={styles.cancelModalTitle}>Cancel Delivery?</Text>
+            <Text style={styles.cancelModalSubtitle}>
+              Select a reason for cancelling this delivery:
+            </Text>
+            <View style={styles.cancelReasonList}>
+              {CANCEL_REASONS.map((reason) => (
+                <Pressable
+                  key={reason.value}
+                  style={[
+                    styles.cancelReasonItem,
+                    selectedCancelReason === reason.value
+                      ? styles.cancelReasonItemSelected
+                      : null,
+                  ]}
+                  onPress={() => setSelectedCancelReason(reason.value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selectedCancelReason === reason.value }}
+                >
+                  <View
+                    style={[
+                      styles.cancelReasonRadio,
+                      selectedCancelReason === reason.value
+                        ? styles.cancelReasonRadioSelected
+                        : null,
+                    ]}
+                  />
+                  <Text style={styles.cancelReasonLabel}>{reason.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.cancelModalButtons}>
+              <Pressable
+                style={styles.cancelModalButtonSecondary}
+                onPress={() => {
+                  setShowCancelModal(false);
+                  setSelectedCancelReason("");
+                }}
+                disabled={isSyncingStatus}
+              >
+                <Text style={styles.cancelModalButtonTextSecondary}>Back</Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.cancelModalButtonPrimary,
+                  !selectedCancelReason || isSyncingStatus
+                    ? styles.cancelModalButtonDisabled
+                    : null,
+                ]}
+                onPress={handleCancelDelivery}
+                disabled={!selectedCancelReason || isSyncingStatus}
+              >
+                {isSyncingStatus ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.cancelModalButtonTextPrimary}>
+                    Confirm Cancel
+                  </Text>
+                )}
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>

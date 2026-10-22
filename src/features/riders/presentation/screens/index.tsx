@@ -22,6 +22,7 @@ import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
 import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
+import { useRiderLocation, calculateDistance } from "@/features/riders/presentation/hooks/useRiderLocation";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
 
@@ -38,7 +39,20 @@ function formatAddressShort(addr: {
 }
 
 /** Formats a RiderOrder into the display shape used by the card component. */
-function toOrderCard(order: RiderOrder, isActive: boolean) {
+function toOrderCard(order: RiderOrder, isActive: boolean, riderLoc?: GeoPoint) {
+  const pickupDistance = riderLoc && order.pickup.address.latitude && order.pickup.address.longitude
+    ? calculateDistance(riderLoc, {
+        latitude: order.pickup.address.latitude,
+        longitude: order.pickup.address.longitude,
+      })
+    : null;
+  const dropoffDistance = riderLoc && order.delivery.address.latitude && order.delivery.address.longitude
+    ? calculateDistance(riderLoc, {
+        latitude: order.delivery.address.latitude,
+        longitude: order.delivery.address.longitude,
+      })
+    : null;
+
   return {
     id: String(order.orderId),
     orderId: order.orderId,
@@ -46,7 +60,9 @@ function toOrderCard(order: RiderOrder, isActive: boolean) {
     recipientLabel: `${order.delivery.buyerName} ${order.delivery.buyerPhone}`,
     pickupLabel: order.pickup.farmerName,
     pickupDistanceLabel: formatAddressShort(order.pickup.address),
+    pickupDistance,
     dropoffLabel: formatAddressShort(order.delivery.address),
+    dropoffDistance,
     dropoffDistanceLabel: order.delivery.noteToRider ?? "",
     isActive,
     status: order.status,
@@ -70,8 +86,21 @@ function DriverOrderCardView({
   const isActive = order.isActive;
   const isAvailable = order.status === "searching";
 
+  const handleCardPress = () => {
+    if (isAvailable) {
+      // Navigate to order detail screen for pre-accept preview
+      router.push(`/rider/orders/${order.orderId}` as never);
+    } else if (isActive) {
+      // Navigate to active delivery
+      router.push({
+        pathname: "/tabs/ActiveDeliveryPage",
+        params: { orderId: String(order.orderId) },
+      } as never);
+    }
+  };
+
   return (
-    <View style={styles.orderCard}>
+    <Pressable style={styles.orderCard} onPress={handleCardPress} accessibilityRole="button">
       <View style={styles.orderTopRow}>
         <Text style={styles.priceText}>{order.amountLabel}</Text>
       </View>
@@ -82,7 +111,16 @@ function DriverOrderCardView({
         <View style={[styles.routeDot, styles.pickupDot]} />
         <View>
           <Text style={styles.routeMainText}>{order.pickupLabel}</Text>
-          <Text style={styles.routeSubText}>{order.pickupDistanceLabel}</Text>
+          <View style={styles.distanceRow}>
+            <Text style={styles.routeSubText}>{order.pickupDistanceLabel}</Text>
+            {order.pickupDistance !== null && order.pickupDistance !== undefined && (
+              <Text style={styles.distanceText}>
+                {order.pickupDistance < 1000
+                  ? `${Math.round(order.pickupDistance)} m away`
+                  : `${(order.pickupDistance / 1000).toFixed(1)} km away`}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
@@ -90,7 +128,16 @@ function DriverOrderCardView({
         <View style={[styles.routeDot, styles.dropoffDot]} />
         <View>
           <Text style={styles.routeMainText}>{order.dropoffLabel}</Text>
-          <Text style={styles.routeSubText}>{order.dropoffDistanceLabel}</Text>
+          <View style={styles.distanceRow}>
+            <Text style={styles.routeSubText}>{order.dropoffDistanceLabel}</Text>
+            {order.dropoffDistance !== null && order.dropoffDistance !== undefined && (
+              <Text style={styles.distanceText}>
+                {order.dropoffDistance < 1000
+                  ? `${Math.round(order.dropoffDistance)} m away`
+                  : `${(order.dropoffDistance / 1000).toFixed(1)} km away`}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
@@ -98,7 +145,10 @@ function DriverOrderCardView({
         <View style={styles.ctaRow}>
           <Pressable
             style={[styles.ctaPill, styles.ctaPillActive]}
-            onPress={() => onAccept(order.orderId)}
+            onPress={(e) => {
+              e.stopPropagation();
+              onAccept(order.orderId);
+            }}
             disabled={acceptInFlight}
             accessibilityRole="button"
             accessibilityLabel={`Accept order ${order.orderId}`}
@@ -111,19 +161,7 @@ function DriverOrderCardView({
           </Pressable>
         </View>
       ) : (
-        <Pressable
-          style={styles.ctaRow}
-          onPress={() =>
-            router.push({
-              pathname: "/tabs/ActiveDeliveryPage",
-              params: { orderId: String(order.orderId) },
-            } as never)
-          }
-          accessibilityRole="button"
-          accessibilityLabel={
-            isActive ? "Open active delivery" : "View active order"
-          }
-        >
+        <View style={styles.ctaRow}>
           <View
             style={[
               styles.ctaPill,
@@ -153,9 +191,9 @@ function DriverOrderCardView({
               color={colors.white}
             />
           </View>
-        </Pressable>
+        </View>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -173,6 +211,9 @@ export default function DriverHomepageScreen() {
     setIsOnline,
     phase: autoAcceptPhase,
   } = useAutoAccept();
+
+  // Rider location for order distance filtering
+  const { location: riderLocation, refreshLocation } = useRiderLocation();
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [activeOrder, setActiveOrder] = useState<RiderOrder | null>(null);
   const [availableOrders, setAvailableOrders] = useState<RiderOrder[]>([]);
@@ -315,8 +356,14 @@ export default function DriverHomepageScreen() {
       }
     : DEFAULT_MAP_CENTER;
 
-  const activeCard = activeOrder ? toOrderCard(activeOrder, true) : null;
-  const availableCards = availableOrders.map((o) => toOrderCard(o, false));
+  const activeCard = activeOrder ? toOrderCard(activeOrder, true, riderLocation ?? undefined) : null;
+  const availableCards = availableOrders
+    .map((o) => toOrderCard(o, false, riderLocation ?? undefined))
+    .filter((card) => {
+      // Filter: only show orders within 10km of rider's current location
+      if (!riderLocation || card.pickupDistance === null) return true; // Show if no location yet
+      return card.pickupDistance <= 10000; // 10km max
+    });
 
   return (
     <View style={styles.screen}>

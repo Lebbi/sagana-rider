@@ -250,6 +250,18 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       fontSize: 9,
       color: colors.textMuted,
     },
+    distanceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      marginTop: 1,
+    },
+    distanceText: {
+      fontFamily: fontFamily.semiBold,
+      fontWeight: fontWeight.semiBold,
+      fontSize: 9,
+      color: colors.primary,
+    },
     ctaRow: {
       marginTop: 7,
       flexDirection: "row",

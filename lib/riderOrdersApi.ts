@@ -72,6 +72,27 @@ export async function updateOrderStatus(
 }
 
 // ============================================================
+// POST /api/rider/orders/:id/cancel
+// ============================================================
+
+export type CancelReason =
+  | "vehicle_breakdown"
+  | "unreachable_contact"
+  | "emergency"
+  | "other";
+
+export async function cancelOrder(
+  orderId: number,
+  reason: CancelReason,
+): Promise<{ success: boolean }> {
+  if (USE_MOCK) return { success: true };
+  const { data } = await api.post(`/rider/orders/${orderId}/cancel`, {
+    reason,
+  });
+  return data;
+}
+
+// ============================================================
 // POST /api/rider/location (broadcast GPS)
 // ============================================================
 
