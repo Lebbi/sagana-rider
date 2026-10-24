@@ -7,8 +7,7 @@
     "icon": "./assets/branding/official_sagana_logo.png",
     "scheme": "saganarider",
     "userInterfaceStyle": "light",
-    "newArchEnabled": false,
-    "ios": {
+        "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sagana.rider",
       "infoPlist": {
@@ -30,11 +29,12 @@
       "package": "com.sagana.rider",
       "versionCode": 1,
       "permissions": [
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "CAMERA",
-        "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -71,10 +71,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "1ca12bda-6b72-4a8d-a9c6-04798851391e"
+        "projectId": "72f78b72-c647-4ed3-87e4-00cafbc0f596"
       },
       "router": {}
     },
-    "owner": "lebbb"
+    "owner": "lebbb1"
   }
 }
