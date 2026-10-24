@@ -61,12 +61,7 @@
       "expo-asset",
       "./plugins/withGoogleMapsKey"
     ],
-    "splash": {
-      "image": "./assets/branding/sagana-wordform-logo.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#D7ECC1"
-    },
-    "experiments": {
+      "experiments": {
       "typedRoutes": true
     },
     "extra": {
