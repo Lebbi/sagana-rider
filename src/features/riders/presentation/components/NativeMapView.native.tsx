@@ -22,13 +22,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 
-// Use native Google Maps MapView only when a Google Maps Android API key
-// is available (env var EXPO_PUBLIC_GOOGLE_MAPS_API_KEY, injected at build
-// time via eas.json). Without a key, native MapView crashes on onCreate
-// with "API key not found" — so we fall back to the Esri tile grid in
-// ALL environments that lack one (Expo Go AND keyless standalone builds).
-const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-const USE_NATIVE_MAP = !!GOOGLE_MAPS_API_KEY;
+// Use native Google Maps MapView only when a Google Maps Android API key is
+// available (env var EXPO_PUBLIC_GOOGLE_MAPS_API_KEY, injected at build time
+// via eas.json). Without it, native MapView crashes on onCreate with
+// "API key not found" — so we fall back to the Esri tile grid in ALL
+// environments that lack one (Expo Go AND keyless standalone builds).
+//
+// Two env vars must both be set for a true native build:
+//   - EXPO_PUBLIC_GOOGLE_MAPS_API_KEY : consumed by this TS code at JS bundle
+//      time; absent → USE_NATIVE_MAP=false → SimpleMapFallback renders.
+//   - GOOGLE_MAPS_API_KEY           : consumed by the config plugin
+//      plugins/withGoogleMapsKey.js; absent → AndroidManifest.xml never gets
+//      the <meta-data> entry, so the native MapView would crash at runtime
+//      if we ever enabled it without the plugin also running.
+// Setting only the first (and forgetting the second) produces a dead-map
+// crash at runtime instead of the safe fallback.
+const EXPO_GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const USE_NATIVE_MAP = !!EXPO_GOOGLE_MAPS_API_KEY && !!GOOGLE_MAPS_API_KEY;
 
 interface NativeMapViewProps {
   route: RouteResponse | null;

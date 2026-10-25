@@ -40,4 +40,4 @@ expo-env.d.ts
 # APK files (too large for GitHub)
 *.apk
 
-# patches dir content is committed; ignore nothing there
+# patches dir content is committed; ignore nothing theregraphify-out/
