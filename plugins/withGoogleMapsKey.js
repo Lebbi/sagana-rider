@@ -12,7 +12,7 @@
 const { withAndroidManifest } = require("expo/config-plugins");
 
 module.exports = function withGoogleMapsKey(config) {
-  return withAndroidManifest(config, (config) => {
+  config = withAndroidManifest(config, (config) => {
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
 
     if (!apiKey) {
@@ -42,4 +42,18 @@ module.exports = function withGoogleMapsKey(config) {
 
     return config;
   });
+
+  // Store the key in app.extra so it can be read at runtime via
+  // Constants.extra.googleMapsApiKey — avoiding process.env injection
+  // which EAS Secrets does not support.
+  const extra = config.modResults?.extra ?? {};
+  config.modResults = {
+    ...config.modResults,
+    extra: {
+      ...extra,
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+    },
+  };
+
+  return config;
 };

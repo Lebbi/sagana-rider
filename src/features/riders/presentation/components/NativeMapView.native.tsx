@@ -10,32 +10,29 @@
  *     "API key not found" and crashes the app. The tile grid always
  *     renders, no key needed.
  *
- *   - With EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (standalone builds with key):
- *     Native react-native-maps MapView with Google Maps. Full pinch-zoom,
+ *   - With Google Maps API key (standalone builds with key injected via
+ *     config plugin): native react-native-maps MapView with Google Maps.
+ *     The key is read from Constants.extra.googleMapsApiKey, which is
+ *     injected by plugins/withGoogleMapsKey.js at build time.
  */
 
 import { MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
+import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 
-// Use native Google Maps MapView only when the JS bundle carries a Google
-// Maps API key (env var EXPO_PUBLIC_GOOGLE_MAPS_API_KEY). Without it, native
-// MapView crashes on onCreate with "API key not found" — so we fall back to
-// the Esri tile grid in ALL environments that lack one (Expo Go AND keyless
-// standalone builds).
-//
-// The AndroidManifest.xml <meta-data> entry is injected separately by the
-// config plugin plugins/withGoogleMapsKey.js, which reads the EAS secret
-// GOOGLE_MAPS_API_KEY at build time. That key is a build-time secret and is
-// NOT visible to process.env in the JS bundle, so it must NOT be part of
-// this gate — gating on it here would force the safe fallback even on
-// builds that have a valid manifest key.
-const EXPO_GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
-const USE_NATIVE_MAP = !!EXPO_GOOGLE_MAPS_API_KEY;
+// Read the Google Maps API key from the config plugin's output.
+// The key is injected at build time into Constants.extra.googleMapsApiKey
+// by plugins/withGoogleMapsKey.js (which reads the EAS secret).
+// This avoids relying on process.env, which EAS Secrets does not populate
+// for the JS bundle.
+const GOOGLE_MAPS_API_KEY =
+  Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
+const USE_NATIVE_MAP = !!GOOGLE_MAPS_API_KEY;
 
 interface NativeMapViewProps {
   route: RouteResponse | null;
