@@ -44,14 +44,20 @@ module.exports = function withGoogleMapsKey(config) {
   });
 
   // Store the key in app.extra so it can be read at runtime via
-  // Constants.extra.googleMapsApiKey — avoiding process.env injection
-  // which EAS Secrets does not support.
-  const extra = config.modResults?.extra ?? {};
-  config.modResults = {
-    ...config.modResults,
-    extra: {
-      ...extra,
-      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
+  // Constants.extra.googleMapsApiKey. This avoids relying on
+  // process.env (injected via EAS secrets) which does not reach the
+  // JS bundle. We write to config.exp.extra which is the canonical
+  // field for custom extra data in Expo config plugins.
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  const extra = config.exp?.extra ?? {};
+  config = {
+    ...config,
+    exp: {
+      ...config.exp,
+      extra: {
+        ...extra,
+        ...(apiKey ? { googleMapsApiKey: apiKey } : {}),
+      },
     },
   };
 
