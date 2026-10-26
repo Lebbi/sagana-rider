@@ -13,7 +13,8 @@ const { withAndroidManifest } = require("expo/config-plugins");
 
 module.exports = function withGoogleMapsKey(config) {
   config = withAndroidManifest(config, (config) => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    // Read from environment variable (EAS secrets) or from app.json extra
+    const apiKey = process.env.GOOGLE_MAPS_API_KEY || config.exp?.extra?.googleMapsApiKey || "";
 
     if (!apiKey) {
       console.warn(
@@ -48,18 +49,17 @@ module.exports = function withGoogleMapsKey(config) {
   // process.env (injected via EAS secrets) which does not reach the
   // JS bundle. We write to config.exp.extra which is the canonical
   // field for custom extra data in Expo config plugins.
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  const extra = config.exp?.extra ?? {};
-  config = {
-    ...config,
-    exp: {
+  // Use the same resolution logic: env var first, then config.extra
+  const finalApiKey = process.env.GOOGLE_MAPS_API_KEY || config.exp?.extra?.googleMapsApiKey || "";
+  if (finalApiKey) {
+    config.exp = {
       ...config.exp,
       extra: {
-        ...extra,
-        ...(apiKey ? { googleMapsApiKey: apiKey } : {}),
+        ...config.exp?.extra,
+        googleMapsApiKey: finalApiKey,
       },
-    },
-  };
+    };
+  }
 
   return config;
 };
