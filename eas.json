@@ -30,8 +30,6 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
-        "GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
         "EXPO_USE_COMMUNITY_AUTOLINKING": "1",
         "NODE_ENV": "production"
@@ -44,8 +42,6 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
-        "GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
         "EXPO_USE_COMMUNITY_AUTOLINKING": "1",
         "NODE_ENV": "production"
@@ -61,8 +57,6 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
-        "EXPO_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
-        "GOOGLE_MAPS_API_KEY": "AIzaSyAa27tohPkhaVqUlCx2ZevEAbO-pplhqyA",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
         "EXPO_USE_COMMUNITY_AUTOLINKING": "1",
         "NODE_ENV": "production"
