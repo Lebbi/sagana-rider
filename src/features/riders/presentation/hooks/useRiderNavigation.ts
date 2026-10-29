@@ -80,6 +80,9 @@ export function useRiderNavigation(
   );
   const isNavigatingRef = useRef(false);
   const lastBroadcastRef = useRef(0);
+  // Set when a phase switch happens before a GPS fix is available;
+  // the next watch tick flushes it and re-fetches the Phase 2 route.
+  const pendingRerouteRef = useRef(false);
 
   // ----------------------------------------------------------
   // Request GPS permission
@@ -181,6 +184,12 @@ export function useRiderNavigation(
           setRiderHeading(location.coords.heading ?? null);
           setGpsAccuracy(location.coords.accuracy ?? null);
 
+          // Flush a deferred phase-switch reroute once, then clear it.
+          if (pendingRerouteRef.current) {
+            pendingRerouteRef.current = false;
+            fetchRoute(newLocation);
+          }
+
           // Broadcast to backend (throttled)
           const now = Date.now();
           if (now - lastBroadcastRef.current >= GPS_UPDATE_INTERVAL) {
@@ -277,8 +286,13 @@ export function useRiderNavigation(
   // ----------------------------------------------------------
 
   useEffect(() => {
-    if (riderLocation && isNavigatingRef.current) {
+    if (!isNavigatingRef.current) return;
+    if (riderLocation) {
       fetchRoute(riderLocation);
+    } else {
+      // No fix yet — defer the re-fetch until the next watch tick
+      // instead of dropping it (the effect deps do not list riderLocation).
+      pendingRerouteRef.current = true;
     }
   }, [destination, destinationType]); // eslint-disable-line react-hooks/exhaustive-deps
 
