@@ -381,13 +381,18 @@ export default function DriverHomepageScreen() {
     [setIsOnline, fetchOrders],
   );
 
-  // Destination for the mini-map — from active order or default center
-  const mapDestination: GeoPoint = activeOrder
+  // Destination for the mini-map — from the active order, or null when idle.
+  // Center on the rider's live GPS when idle (fallback to the service-area
+  // default if no fix yet), and on the delivery destination when on a delivery.
+  const mapDestination: GeoPoint | null = activeOrder
     ? {
         latitude: activeOrder.delivery.address.latitude,
         longitude: activeOrder.delivery.address.longitude,
       }
-    : DEFAULT_MAP_CENTER;
+    : null;
+  // Center on the delivery when on a delivery, otherwise on the rider's
+  // live GPS (falling back to the service-area default until a fix arrives).
+  const mapCenter: GeoPoint = mapDestination ?? riderLocation ?? DEFAULT_MAP_CENTER;
 
   const activeCard = activeOrder ? toOrderCard(activeOrder, true, riderLocation ?? undefined) : null;
   const availableCards = availableOrders
@@ -469,10 +474,11 @@ export default function DriverHomepageScreen() {
             {/* INTERACTIVE MAP — pinch zoom, pan, markers */}
             <NativeMapView
               route={null}
-              riderLocation={null}
+              riderLocation={riderLocation ?? null}
               riderHeading={null}
               destination={mapDestination}
               destinationType="delivery"
+              center={mapCenter}
               isDarkMode={false}
             />
 
