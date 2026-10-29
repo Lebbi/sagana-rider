@@ -8,7 +8,7 @@
  */
 
 import * as Location from "expo-location";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GeoPoint } from "@/types/maps";
 
 export interface UseRiderLocationReturn {
@@ -81,9 +81,41 @@ export function useRiderLocation(): UseRiderLocationReturn {
   }, [requestPermission]);
 
   // Initial location fetch
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+
+  // Start continuous position updates after permission is granted. The
+  // one-shot fetchLocation gives a fast first fix; this keeps the coord
+  // current as the rider moves.
+  const startWatch = useCallback(async () => {
+    const granted = await requestPermission();
+    if (!granted) return;
+    try {
+      watchRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 5 },
+        (pos) => {
+          setLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+          setAccuracy(pos.coords.accuracy ?? null);
+        },
+      );
+    } catch (e) {
+      if (__DEV__) {
+        console.error("[useRiderLocation] Watch error:", e);
+      }
+      setError("Failed to track location");
+    }
+  }, [requestPermission]);
+
   useEffect(() => {
     fetchLocation();
-  }, [fetchLocation]);
+    startWatch();
+    return () => {
+      watchRef.current?.remove();
+      watchRef.current = null;
+    };
+  }, [fetchLocation, startWatch]);
 
   return {
     location,
