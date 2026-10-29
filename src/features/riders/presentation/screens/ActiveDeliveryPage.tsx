@@ -2,6 +2,7 @@ import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
@@ -25,6 +26,7 @@ import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRide
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import { cancelOrder, getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
 import type { CancelReason } from "@/lib/riderOrdersApi";
+import { showSaganaToast } from "@/components/ui/saganaToastConfig";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
@@ -56,8 +58,10 @@ function formatOrderItem(item: { productName: string; variationName?: string; qu
  * Resolves farmer/seller name with fallback chain per spec:
  * shop_name -> business_name -> name -> farm_name -> 'Farmer'
  * Handles both camelCase and snake_case from API.
+ * Returns 'Farmer' if pickup is undefined or no name fields present.
  */
-function resolveFarmerName(pickup: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
+function resolveFarmerName(pickup?: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
+  if (!pickup) return "Farmer";
   return (
     pickup.farmerName
     ?? pickup.shopName
@@ -71,8 +75,10 @@ function resolveFarmerName(pickup: { farmerName?: string; shopName?: string; bus
 /**
  * Resolves pickup address with fallback.
  * Uses full address if available, otherwise barangay + city.
+ * Returns "Address pending" if pickup is undefined or no address fields present.
  */
-function resolvePickupAddress(pickup: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
+function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
+  if (!pickup) return "Address pending";
   const addr = pickup.address;
   if (addr && (addr.street || addr.barangay || addr.city || addr.province)) {
     return [addr.street, addr.barangay, addr.city, addr.province].filter(Boolean).join(", ");
@@ -289,6 +295,27 @@ export default function ActiveDeliveryPage() {
     syncPickupComplete();
   }, [activePhase, allItemsChecked, pickupPhoto, numericOrderId, order]);
 
+  // Surface a Sagana toast when location is off or could not be fetched,
+  // so the rider is not left looking at a silent destination-only map.
+  // Tapping the toast opens system settings to re-enable location.
+  useEffect(() => {
+    if (nav.locationStatus === "denied" || nav.locationStatus === "failed") {
+      showSaganaToast({
+        type: "error",
+        text1:
+          nav.locationStatus === "denied"
+            ? "Location is off"
+            : "Couldn’t get your location",
+        text2:
+          nav.locationStatus === "denied"
+            ? "Turn it on to see your route and ETA."
+            : "Tap to check settings.",
+        actionHint: "Open settings",
+        onPress: () => Linking.openSettings(),
+      });
+    }
+  }, [nav.locationStatus]);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -439,17 +466,6 @@ export default function ActiveDeliveryPage() {
     }
   }, [order, router, selectedCancelReason]);
 
-  const isPhaseOne = activePhase === 1;
-  const headerName = isPhaseOne
-    ? resolveFarmerName(order?.pickup as any)
-    : (order?.delivery.buyerName ?? "Buyer");
-  const headerNumber = isPhaseOne
-    ? (order?.pickup.farmerPhone ?? "")
-    : (order?.delivery.buyerPhone ?? "");
-  const headerAvatar = isPhaseOne
-    ? (order?.pickup.farmerPhoto ?? undefined)
-    : (order?.delivery.buyerPhoto ?? undefined);
-
   // Loading state — show spinner only while fetching
   if (isLoading) {
     return (
@@ -485,6 +501,18 @@ export default function ActiveDeliveryPage() {
       </View>
     );
   }
+
+  // These run AFTER early returns — order is guaranteed non-null here
+  const isPhaseOne = activePhase === 1;
+  const headerName = isPhaseOne
+    ? resolveFarmerName(order.pickup)
+    : (order.delivery.buyerName ?? "Buyer");
+  const headerNumber = isPhaseOne
+    ? (order.pickup.farmerPhone ?? "")
+    : (order.delivery.buyerPhone ?? "");
+  const headerAvatar = isPhaseOne
+    ? (order.pickup.farmerPhoto ?? undefined)
+    : (order.delivery.buyerPhoto ?? undefined);
 
   return (
     <View style={styles.screen}>
@@ -651,7 +679,7 @@ export default function ActiveDeliveryPage() {
                 <Text style={styles.badgeText}>Current Pickup</Text>
               </View>
               <Text style={styles.mainTargetName}>
-                {resolveFarmerName(order?.pickup as any)}
+                {resolveFarmerName(order.pickup)}
               </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
@@ -661,12 +689,12 @@ export default function ActiveDeliveryPage() {
                 />
                 <Text style={styles.baseText}>
                   {isPhaseOne
-                    ? resolvePickupAddress(order?.pickup as any)
+                    ? resolvePickupAddress(order.pickup)
                     : [
-                        order?.delivery.address.street,
-                        order?.delivery.address.barangay,
-                        order?.delivery.address.city,
-                        order?.delivery.address.province,
+                        order.delivery.address.street,
+                        order.delivery.address.barangay,
+                        order.delivery.address.city,
+                        order.delivery.address.province,
                       ]
                         .filter(Boolean)
                         .join(", ")}
@@ -756,7 +784,7 @@ export default function ActiveDeliveryPage() {
                 <Text style={styles.badgeText}>Current Delivery</Text>
               </View>
               <Text style={styles.mainTargetName}>
-                {order?.delivery.buyerName ?? "Buyer"}
+                {order.delivery.buyerName ?? "Buyer"}
               </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
@@ -766,17 +794,17 @@ export default function ActiveDeliveryPage() {
                 />
                 <Text style={styles.baseText}>
                   {[
-                    order?.delivery.address.street,
-                    order?.delivery.address.barangay,
-                    order?.delivery.address.city,
-                    order?.delivery.address.province,
+                    order.delivery.address.street,
+                    order.delivery.address.barangay,
+                    order.delivery.address.city,
+                    order.delivery.address.province,
                   ]
                     .filter(Boolean)
                     .join(", ")}
                 </Text>
               </View>
 
-              {order?.delivery.noteToRider ? (
+              {order.delivery.noteToRider ? (
                 <Text style={styles.baseText}>
                   {order.delivery.noteToRider}
                 </Text>
