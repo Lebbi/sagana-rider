@@ -24,6 +24,7 @@ import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 import { useRiderLocation, calculateDistance } from "@/features/riders/presentation/hooks/useRiderLocation";
+import { getOrderCardRoute } from "@/features/riders/presentation/utils/orderNavigation";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
 
@@ -88,16 +89,7 @@ function DriverOrderCardView({
   const isAvailable = order.status === "searching";
 
   const handleCardPress = () => {
-    if (isAvailable) {
-      // Navigate to order detail screen for pre-accept preview
-      router.push(`/rider/orders/${order.orderId}` as never);
-    } else if (isActive) {
-      // Navigate to active delivery
-      router.push({
-        pathname: "/tabs/ActiveDeliveryPage",
-        params: { orderId: String(order.orderId) },
-      } as never);
-    }
+    router.push(getOrderCardRoute(order) as never);
   };
 
   return (
