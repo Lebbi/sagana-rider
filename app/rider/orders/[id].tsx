@@ -17,22 +17,13 @@ import { fontFamily } from "@/constants/FontTheme";
 import { getRiderOrderById } from "@/lib/riderOrdersApi";
 import { acceptOrder } from "@/lib/riderOrdersApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
-import type { DeliveryStatus, RiderOrder } from "@/types/maps";
+import type { RiderOrder } from "@/types/maps";
+import {
+  STATUS_TIMELINE,
+  getTimelineStepStates,
+} from "@/features/riders/presentation/utils/orderTimeline";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
-
-// Status order for timeline
-const STATUS_TIMELINE: { status: DeliveryStatus; label: string; icon: string }[] = [
-  { status: "searching", label: "Searching for Rider", icon: "radio-button-unchecked" },
-  { status: "accepted", label: "Order Accepted", icon: "check-circle" },
-  { status: "to_pickup", label: "En Route to Pickup", icon: "local-shipping" },
-  { status: "arrived_pickup", label: "Arrived at Pickup", icon: "location-on" },
-  { status: "picked_up", label: "Items Collected", icon: "inventory-2" },
-  { status: "to_delivery", label: "En Route to Delivery", icon: "local-shipping" },
-  { status: "arrived_delivery", label: "Arrived at Delivery", icon: "location-on" },
-  { status: "delivered", label: "Delivered", icon: "check-circle" },
-  { status: "cancelled", label: "Cancelled", icon: "cancel" },
-];
 
 function formatDate(iso: string): string {
   try {
@@ -173,7 +164,7 @@ export default function RiderOrderDetailScreen() {
     );
   }
 
-  const currentStatusIndex = STATUS_TIMELINE.findIndex((s) => s.status === order.status);
+  const stepStates = getTimelineStepStates(order.status);
   const farmerName = resolveFarmerName(order.pickup);
 
   return (
@@ -231,9 +222,11 @@ export default function RiderOrderDetailScreen() {
             <Text style={styles.sectionTitle}>Delivery Timeline</Text>
             <View style={styles.timeline}>
               {STATUS_TIMELINE.map((step, index) => {
-                const isCompleted = index <= currentStatusIndex;
-                const isCurrent = index === currentStatusIndex;
-                const isFuture = index > currentStatusIndex;
+                const state = stepStates[index];
+                const isFuture = state === "future";
+                const isCurrent = state === "current";
+                const isCompleted = !isFuture;
+                const isCancelledStep = isCurrent && step.status === "cancelled";
 
                 return (
                   <View key={step.status} style={styles.timelineItem}>
@@ -254,11 +247,15 @@ export default function RiderOrderDetailScreen() {
                             : isCurrent
                               ? styles.timelineDotCurrent
                               : styles.timelineDotFuture,
+                          isCancelledStep && {
+                            backgroundColor: colors.error,
+                            borderColor: colors.error,
+                          },
                         ]}
                       >
                         {isCompleted && (
                           <MaterialIcons
-                            name="check"
+                            name={isCancelledStep ? "close" : "check"}
                             size={12}
                             color="#FFFFFF"
                           />
@@ -293,7 +290,7 @@ export default function RiderOrderDetailScreen() {
                 <Text style={styles.earningsLabel}>Delivery Fee</Text>
                 <Text style={styles.earningsValue}>₱{order.shippingFee.toFixed(2)}</Text>
               </View>
-              {order.codAmount && order.codAmount > 0 && (
+              {order.codAmount != null && order.codAmount > 0 && (
                 <View style={styles.earningsItem}>
                   <Text style={styles.earningsLabel}>Cash on Delivery</Text>
                   <Text style={styles.earningsValue}>₱{order.codAmount.toFixed(2)}</Text>
