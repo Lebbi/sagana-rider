@@ -59,7 +59,10 @@ jest.mock("@/lib/riderSettingsApi", () => ({
 
 import HomeScreen from "../index";
 
-const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+const flush = () =>
+  act(async () => {
+    for (let i = 0; i < 10; i++) await new Promise((r) => setTimeout(r, 0));
+  });
 
 describe("home screen order fetching", () => {
   beforeEach(() => {
