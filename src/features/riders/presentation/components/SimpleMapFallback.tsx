@@ -10,12 +10,14 @@
 
 import type { GeoPoint } from "@/types/maps";
 import { Image } from "expo-image";
-import { useMemo } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
 interface SimpleMapFallbackProps {
   destination: GeoPoint;
   isDarkMode?: boolean;
+  onLoadEnd?: () => void;
+  onError?: () => void;
 }
 
 // Convert lat/lng to tile numbers at zoom level z
@@ -32,6 +34,8 @@ function latLngToTile(lat: number, lng: number, z: number) {
 export default function SimpleMapFallback({
   destination,
   isDarkMode = false,
+  onLoadEnd,
+  onError,
 }: SimpleMapFallbackProps) {
   const zoom = 13;
   const centerTile = useMemo(
@@ -56,6 +60,37 @@ export default function SimpleMapFallback({
     return list;
   }, [centerTile, zoom, isDarkMode]);
 
+  const [loadedCount, setLoadedCount] = useState(0);
+  const [hasError, setHasError] = useState(false);
+  const [tilesLoaded, setTilesLoaded] = useState(false);
+  const totalTiles = tiles.length; // 9
+
+  const handleTileLoad = useCallback(() => {
+    if (hasError) return;
+    setLoadedCount((prev) => {
+      const next = prev + 1;
+      if (next === totalTiles) {
+        setTilesLoaded(true);
+      }
+      return next;
+    });
+  }, [hasError, totalTiles]);
+
+  // Defer onLoadEnd to avoid "Cannot update during render" error
+  useEffect(() => {
+    if (tilesLoaded && onLoadEnd) {
+      onLoadEnd();
+    }
+  }, [tilesLoaded, onLoadEnd]);
+
+  const handleTileError = useCallback(() => {
+    if (!hasError) {
+      setHasError(true);
+      // Defer onError to avoid "Cannot update during render" error
+      queueMicrotask(() => onError?.());
+    }
+  }, [hasError, onError]);
+
   return (
     <View style={styles.container}>
       {/* 3x3 tile grid laid out as 3 rows × 3 columns */}
@@ -68,6 +103,8 @@ export default function SimpleMapFallback({
               style={styles.tile}
               contentFit="cover"
               transition={0}
+              onLoadEnd={handleTileLoad}
+              onError={handleTileError}
             />
           ))}
         </View>
