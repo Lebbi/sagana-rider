@@ -1,5 +1,8 @@
 module.exports = {
   preset: "jest-expo",
-  moduleNameMapper: { "^@/(.*)$": "<rootDir>/$1" },
+  moduleNameMapper: {
+    "^@/features/(.*)$": "<rootDir>/src/features/$1",
+    "^@/(.*)$": "<rootDir>/$1",
+  },
   testPathIgnorePatterns: ["/node_modules/", "/.claude/", "/android/"],
 };
