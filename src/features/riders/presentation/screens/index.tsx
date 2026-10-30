@@ -245,7 +245,7 @@ export default function DriverHomepageScreen() {
     } finally {
       setIsLoadingOrders(false);
     }
-  }, [riderLocation, isOnDuty, autoAcceptEnabled]);
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
