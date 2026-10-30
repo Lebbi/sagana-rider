@@ -540,18 +540,20 @@ export default function ActiveDeliveryPage() {
               <Text style={styles.topBarNumber}>{headerNumber}</Text>
             </View>
             <View style={styles.topBarActions}>
-              <Pressable
-                style={styles.headerActionButton}
-                onPress={() => setShowCancelModal(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel delivery"
-              >
-                <MaterialIcons
-                  name={IconTheme.closeCircle}
-                  size={21}
-                  color="#BA1A1A"
-                />
-              </Pressable>
+              {isPhaseOne && (
+                <Pressable
+                  style={styles.headerActionButton}
+                  onPress={() => setShowCancelModal(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel delivery"
+                >
+                  <MaterialIcons
+                    name={IconTheme.closeCircle}
+                    size={21}
+                    color="#BA1A1A"
+                  />
+                </Pressable>
+              )}
               <Pressable style={styles.headerActionButton}>
                 <MaterialIcons
                   name={IconTheme.phone}
@@ -950,7 +952,7 @@ export default function ActiveDeliveryPage() {
 
       {/* Cancel Delivery Confirmation Modal */}
       <Modal
-        visible={showCancelModal}
+        visible={showCancelModal && isPhaseOne}
         transparent
         animationType="fade"
         statusBarTranslucent
