@@ -129,12 +129,14 @@ function FallbackMapView(props: any) {
 function LazyNamedComp(
   key: keyof Pick<MapsModule, "Marker" | "Circle" | "Polyline">,
 ): MapComp {
-  return (props) => {
+  const LazyNamed: MapComp = (props) => {
     const m = useMaps();
     const Actual = m?.[key] as MapComp | undefined;
     if (!Actual) return null;
     return <Actual {...props} />;
   };
+  LazyNamed.displayName = `Lazy${key}`;
+  return LazyNamed;
 }
 
 function SafeMapComponent(props: any): ReactElement | null {
