@@ -57,7 +57,8 @@ function formatOrderItem(item: { productName: string; variationName?: string; qu
  * shop_name -> business_name -> name -> farm_name -> 'Farmer'
  * Handles both camelCase and snake_case from API.
  */
-function resolveFarmerName(pickup: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
+function resolveFarmerName(pickup?: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
+  if (!pickup) return "Farmer";
   return (
     pickup.farmerName
     ?? pickup.shopName
@@ -72,7 +73,8 @@ function resolveFarmerName(pickup: { farmerName?: string; shopName?: string; bus
  * Resolves pickup address with fallback.
  * Uses full address if available, otherwise barangay + city.
  */
-function resolvePickupAddress(pickup: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
+function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
+  if (!pickup) return "Address pending";
   const addr = pickup.address;
   if (addr && (addr.street || addr.barangay || addr.city || addr.province)) {
     return [addr.street, addr.barangay, addr.city, addr.province].filter(Boolean).join(", ");
