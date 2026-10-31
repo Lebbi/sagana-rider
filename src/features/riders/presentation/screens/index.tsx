@@ -33,11 +33,14 @@ function formatAddressShort(addr: {
   street: string;
   barangay: string;
   city: string;
+  province: string;
+  coordinatesMissing?: boolean;
 }): string {
-  return (
-    [addr.street, addr.barangay, addr.city].filter(Boolean).join(", ") ||
-    "Address pending"
-  );
+  const text =
+    [addr.street, addr.barangay, addr.city, addr.province]
+      .filter(Boolean)
+      .join(", ") || "Address pending";
+  return addr.coordinatesMissing ? `${text} (map pin not set)` : text;
 }
 
 /** Formats a RiderOrder into the display shape used by the card component. */
@@ -294,6 +297,7 @@ export default function DriverHomepageScreen() {
   // Also refetch when on-duty status changes (e.g., rider toggles the switch)
   useEffect(() => {
     if (!isLoadingSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch when duty status changes; fetchOrders only sets loading flags
       fetchOrders();
     }
   }, [isOnDuty, isLoadingSettings, fetchOrders]);

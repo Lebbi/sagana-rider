@@ -30,6 +30,18 @@ import { showSaganaToast } from "@/components/ui/saganaToastConfig";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
+const removePhotoStyle = {
+  position: "absolute" as const,
+  top: 12,
+  right: 4,
+  width: 24,
+  height: 24,
+  borderRadius: 12,
+  backgroundColor: "rgba(0,0,0,0.6)",
+  alignItems: "center" as const,
+  justifyContent: "center" as const,
+};
+
 const SHEET_COLLAPSED_OFFSET = 380;
 const SHEET_EXPANDED_OFFSET = 110;
 const DRAG_DISMISS_THRESHOLD = 64;
@@ -90,6 +102,14 @@ function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?:
   return "Address pending";
 }
 
+function MapPinNote() {
+  return (
+    <Text style={{ fontSize: 9, color: "#ba1a1a", marginTop: 4 }}>
+      Map pin not set. Confirm the exact address by phone before heading out.
+    </Text>
+  );
+}
+
 export default function ActiveDeliveryPage() {
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -106,6 +126,7 @@ export default function ActiveDeliveryPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedCancelReason, setSelectedCancelReason] = useState<CancelReason | "">("");
   const hasCompletedPhaseOneRef = useRef(false);
+  const orderRef = useRef<RiderOrder | null>(null);
 
   // Proof photos: base64 strings sent to backend on status update.
   // Pickup photo is required before the checklist auto-completes.
@@ -113,6 +134,23 @@ export default function ActiveDeliveryPage() {
   // is enabled; rider can add more (displayed side-by-side).
   const [pickupPhoto, setPickupPhoto] = useState<string | null>(null);
   const [deliveryPhotos, setDeliveryPhotos] = useState<string[]>([]);
+
+  // The tab screen stays mounted between orders, so every per-order value
+  // must be reset whenever the loaded order changes or finishes.
+  useEffect(() => {
+    orderRef.current = order;
+  }, [order]);
+
+  const loadOrder = useCallback((next: RiderOrder | null) => {
+    const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
+    const inPhaseTwo = !!next && !pickupStatuses.includes(next.status);
+    setOrder(next);
+    setCheckedItems(next ? next.pickup.items.map(() => false) : []);
+    setActivePhase(inPhaseTwo ? 2 : 1);
+    hasCompletedPhaseOneRef.current = inPhaseTwo;
+    setPickupPhoto(null);
+    setDeliveryPhotos([]);
+  }, []);
 
   // When the Active tab is tapped without an orderId param (e.g. rider
   // taps the Active tab on the nav bar after accepting an order from Home),
@@ -138,15 +176,9 @@ export default function ActiveDeliveryPage() {
             "arrived_delivery",
           ];
           const active = orders.find((o) => activeStatuses.includes(o.status));
-          if (active) {
-            setOrder(active);
-            setCheckedItems(active.pickup.items.map(() => false));
-            const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
-            setActivePhase(pickupStatuses.includes(active.status) ? 1 : 2);
-          } else {
-            // No active order — show empty state
-            setOrder(null);
-          }
+          // Same order refetched on focus keeps the rider's in-progress photos.
+          if (active?.orderId === orderRef.current?.orderId && active?.status === orderRef.current?.status) return;
+          loadOrder(active ?? null);
         } catch (e) {
           if (__DEV__) console.warn("[ActiveDelivery] Failed to fetch active order:", e);
           // Network failure — keep whatever state we had rather than
@@ -160,7 +192,7 @@ export default function ActiveDeliveryPage() {
       return () => {
         mounted = false;
       };
-    }, [orderId]),
+    }, [orderId, loadOrder]),
   );
 
   // Fetch order from API — retry up to 3 times with 500ms delay because
@@ -174,6 +206,7 @@ export default function ActiveDeliveryPage() {
       setIsLoading(false);
       return;
     }
+    loadOrder(null);
     setIsLoading(true);
     let cancelled = false;
     let attempt = 0;
@@ -187,16 +220,10 @@ export default function ActiveDeliveryPage() {
           // If the order is already delivered/cancelled, don't show it —
           // the rider already completed this delivery. Show empty state.
           if (fetched.status === "delivered" || fetched.status === "cancelled") {
-            setOrder(null);
+            loadOrder(null);
             return;
           }
-          setOrder(fetched);
-          setCheckedItems(fetched.pickup.items.map(() => false));
-          const pickupStatuses = ["accepted", "to_pickup", "arrived_pickup"];
-          if (!pickupStatuses.includes(fetched.status)) {
-            setActivePhase(2);
-            hasCompletedPhaseOneRef.current = true;
-          }
+          loadOrder(fetched);
           return;
         } catch (e: any) {
           if (__DEV__)
@@ -218,7 +245,7 @@ export default function ActiveDeliveryPage() {
     return () => {
       cancelled = true;
     };
-  }, [numericOrderId]);
+  }, [numericOrderId, loadOrder]);
 
   // Determine destination based on phase
   const destination: GeoPoint | null = useMemo(() => {
@@ -271,7 +298,11 @@ export default function ActiveDeliveryPage() {
     const syncPickupComplete = async () => {
       setIsSyncingStatus(true);
       try {
-        await updateOrderStatus(order?.orderId ?? numericOrderId, "picked_up", pickupPhoto);
+        const orderId = order?.orderId ?? numericOrderId;
+        await updateOrderStatus(orderId, "picked_up", pickupPhoto);
+        // Rider now heads to the buyer: farmer screen flips to In Transit.
+        // Best effort — pickup is already saved and "delivered" may skip this step.
+        updateOrderStatus(orderId, "to_delivery").catch(() => {});
         setShowPhaseTransition(true);
         setTimeout(() => {
           setShowPhaseTransition(false);
@@ -423,6 +454,7 @@ export default function ActiveDeliveryPage() {
         "Delivery Complete",
         "Earnings have been added to your wallet.",
       );
+      loadOrder(null);
       router.replace("/tabs" as never);
     } catch (e: any) {
       const status = e?.response?.status;
@@ -436,7 +468,7 @@ export default function ActiveDeliveryPage() {
     } finally {
       setIsSyncingStatus(false);
     }
-  }, [numericOrderId, router, deliveryPhotos]);
+  }, [numericOrderId, router, deliveryPhotos, order, loadOrder]);
 
   // Cancel delivery — calls backend to cancel/unassign, resets rider to available
   const handleCancelDelivery = useCallback(async () => {
@@ -451,6 +483,7 @@ export default function ActiveDeliveryPage() {
       );
       setShowCancelModal(false);
       setSelectedCancelReason("");
+      loadOrder(null);
       router.replace("/tabs" as never);
     } catch (e: any) {
       const status = e?.response?.status;
@@ -464,7 +497,7 @@ export default function ActiveDeliveryPage() {
     } finally {
       setIsSyncingStatus(false);
     }
-  }, [order, router, selectedCancelReason]);
+  }, [order, router, selectedCancelReason, loadOrder]);
 
   // Loading state — show spinner only while fetching
   if (isLoading) {
@@ -504,6 +537,8 @@ export default function ActiveDeliveryPage() {
 
   // These run AFTER early returns — order is guaranteed non-null here
   const isPhaseOne = activePhase === 1;
+  const mapPinMissing = (isPhaseOne ? order.pickup.address : order.delivery.address)
+    .coordinatesMissing;
   const headerName = isPhaseOne
     ? resolveFarmerName(order.pickup)
     : (order.delivery.buyerName ?? "Buyer");
@@ -568,18 +603,20 @@ export default function ActiveDeliveryPage() {
               <Text style={styles.topBarNumber}>{headerNumber}</Text>
             </View>
             <View style={styles.topBarActions}>
-              <Pressable
-                style={styles.headerActionButton}
-                onPress={() => setShowCancelModal(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Cancel delivery"
-              >
-                <MaterialIcons
-                  name={IconTheme.closeCircle}
-                  size={21}
-                  color="#BA1A1A"
-                />
-              </Pressable>
+              {isPhaseOne && (
+                <Pressable
+                  style={styles.headerActionButton}
+                  onPress={() => setShowCancelModal(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel delivery"
+                >
+                  <MaterialIcons
+                    name={IconTheme.closeCircle}
+                    size={21}
+                    color="#BA1A1A"
+                  />
+                </Pressable>
+              )}
               <Pressable style={styles.headerActionButton}>
                 <MaterialIcons
                   name={IconTheme.phone}
@@ -701,6 +738,8 @@ export default function ActiveDeliveryPage() {
                 </Text>
               </View>
 
+              {mapPinMissing && <MapPinNote />}
+
               <Text style={styles.sectionLabel}>ITEMS TO COLLECT</Text>
               <View style={styles.checkboxGroup}>
                 {(order?.pickup.items ?? []).map((item, index) => {
@@ -753,16 +792,26 @@ export default function ActiveDeliveryPage() {
               </Pressable>
 
               {pickupPhoto && (
-                <Image
-                  source={{ uri: `data:image/jpeg;base64,${pickupPhoto}` }}
-                  style={{
-                    width: "100%",
-                    height: 120,
-                    borderRadius: 8,
-                    marginTop: 8,
-                  }}
-                  contentFit="cover"
-                />
+                <View>
+                  <Image
+                    source={{ uri: `data:image/jpeg;base64,${pickupPhoto}` }}
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      borderRadius: 8,
+                      marginTop: 8,
+                    }}
+                    contentFit="cover"
+                  />
+                  <Pressable
+                    style={removePhotoStyle}
+                    onPress={() => setPickupPhoto(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove pickup photo"
+                  >
+                    <MaterialIcons name="close" size={14} color="#FFFFFF" />
+                  </Pressable>
+                </View>
               )}
 
               {!pickupPhoto && allItemsChecked && (
@@ -803,6 +852,8 @@ export default function ActiveDeliveryPage() {
                     .join(", ")}
                 </Text>
               </View>
+
+              {mapPinMissing && <MapPinNote />}
 
               {order.delivery.noteToRider ? (
                 <Text style={styles.baseText}>
@@ -847,16 +898,25 @@ export default function ActiveDeliveryPage() {
                     }}
                   >
                     {deliveryPhotos.map((photo, index) => (
-                      <Image
-                        key={index}
-                        source={{ uri: `data:image/jpeg;base64,${photo}` }}
-                        style={{
-                          flex: 1,
-                          height: 90,
-                          borderRadius: 8,
-                        }}
-                        contentFit="cover"
-                      />
+                      <View key={index} style={{ flex: 1 }}>
+                        <Image
+                          source={{ uri: `data:image/jpeg;base64,${photo}` }}
+                          style={{ height: 90, borderRadius: 8 }}
+                          contentFit="cover"
+                        />
+                        <Pressable
+                          style={removePhotoStyle}
+                          onPress={() =>
+                            setDeliveryPhotos((prev) =>
+                              prev.filter((_, i) => i !== index),
+                            )
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Remove delivery photo"
+                        >
+                          <MaterialIcons name="close" size={14} color="#FFFFFF" />
+                        </Pressable>
+                      </View>
                     ))}
                   </View>
 
@@ -978,7 +1038,7 @@ export default function ActiveDeliveryPage() {
 
       {/* Cancel Delivery Confirmation Modal */}
       <Modal
-        visible={showCancelModal}
+        visible={showCancelModal && isPhaseOne}
         transparent
         animationType="fade"
         statusBarTranslucent

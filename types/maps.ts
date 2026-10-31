@@ -35,6 +35,8 @@ export interface PreciseAddress {
   city: string;
   province: string;
   postalCode: string | null;
+  /** True when the server had no real coordinates, so latitude/longitude are a map placeholder. */
+  coordinatesMissing?: boolean;
   /** "Blue gate, beside Aling Nena's sari-sari store, 2nd floor" */
   landmarkNote: string;
   /** "Home", "Work", "Farm" */
