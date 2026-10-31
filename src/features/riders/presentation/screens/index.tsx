@@ -294,6 +294,7 @@ export default function DriverHomepageScreen() {
   // Also refetch when on-duty status changes (e.g., rider toggles the switch)
   useEffect(() => {
     if (!isLoadingSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch when duty status changes; fetchOrders only sets loading flags
       fetchOrders();
     }
   }, [isOnDuty, isLoadingSettings, fetchOrders]);

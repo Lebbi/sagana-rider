@@ -296,6 +296,7 @@ export function useRiderNavigation(
   useEffect(() => {
     if (!isNavigatingRef.current) return;
     if (riderLocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- refetch on destination change; fetchRoute only sets loading flags
       fetchRoute(riderLocation);
     } else {
       // No fix yet — defer the re-fetch until the next watch tick
