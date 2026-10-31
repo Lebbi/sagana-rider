@@ -23,17 +23,10 @@ import {
     getTileStyle,
 } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
-import { Asset } from "expo-asset";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
-
-// Bundled Leaflet 1.9.4 (downloaded from unpkg, stored locally to eliminate
-// CDN dependency + SRI risk — D2 finding 4 security hardening).
-// On native, expo-asset resolves these to local file:// URIs that the
-// WebView can load via <script src>. On web, they resolve to the bundler URL.
-const leafletJsAsset = Asset.fromModule(require("@/assets/leaflet/leaflet.js"));
-const leafletCssAsset = Asset.fromModule(require("@/assets/leaflet/leaflet.css"));
+import { LEAFLET_CSS, LEAFLET_JS } from "./leafletSource";
 
 // ============================================================
 // Props
@@ -74,32 +67,6 @@ export default function RiderNavigationWebView({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
-  const [leafletUris, setLeafletUris] = useState<{ js: string; css: string } | null>(null);
-
-  // Load bundled Leaflet assets (downloads to local cache on first run).
-  // This replaces the CDN <script src="unpkg.com"> with local file:// URIs,
-  // eliminating the supply-chain + SRI risk (D2 finding 4).
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        await Promise.all([leafletJsAsset.downloadAsync(), leafletCssAsset.downloadAsync()]);
-        if (!mounted) return;
-        setLeafletUris({
-          js: leafletJsAsset.localUri || leafletJsAsset.uri,
-          css: leafletCssAsset.localUri || leafletCssAsset.uri,
-        });
-      } catch (e) {
-        if (__DEV__) console.warn("[RiderNavigationWebView] Failed to load Leaflet assets:", e);
-        // Fallback: use the remote URIs (better than no map)
-        if (mounted) setLeafletUris({
-          js: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-          css: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-        });
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
 
   const tileStyle = getTileStyle(isDarkMode);
   const tileConfig = TILE_LAYERS[tileStyle];
@@ -119,15 +86,13 @@ export default function RiderNavigationWebView({
   // Generate the HTML for the WebView
   // ----------------------------------------------------------
 
-  const mapHTML = leafletUris ? generateMapHTML({
+  const mapHTML = generateMapHTML({
     tileConfig,
     colors,
     destination,
     destinationType,
     isDarkMode,
-    leafletJsUri: leafletUris.js,
-    leafletCssUri: leafletUris.css,
-  }) : "";
+  });
 
   // ----------------------------------------------------------
   // Send route to WebView when it changes
@@ -216,12 +181,6 @@ export default function RiderNavigationWebView({
 
   return (
     <View style={styles.container}>
-      {!leafletUris && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.routeLine} />
-        </View>
-      )}
-      {leafletUris && (
       <WebView
         ref={webViewRef}
         source={{ html: mapHTML }}
@@ -277,7 +236,6 @@ export default function RiderNavigationWebView({
           </View>
         )}
       />
-      )}
       {isLoading && !showFallback && (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#8ecb95" />
@@ -323,8 +281,6 @@ function generateMapHTML({
   destination,
   destinationType,
   isDarkMode,
-  leafletJsUri,
-  leafletCssUri,
 }: {
   tileConfig: {
     url: string;
@@ -336,8 +292,6 @@ function generateMapHTML({
   destination: GeoPoint;
   destinationType: "pickup" | "delivery";
   isDarkMode: boolean;
-  leafletJsUri: string;
-  leafletCssUri: string;
 }): string {
   const destIconHTML =
     destinationType === "pickup"
@@ -363,7 +317,7 @@ function generateMapHTML({
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, minimum-scale=0.5, user-scalable=yes">
-    <link rel="stylesheet" href="${leafletCssUri}" />
+    <style>${LEAFLET_CSS}</style>
     <style>
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       html, body {
@@ -403,7 +357,7 @@ function generateMapHTML({
   </head>
   <body>
     <div id="map"></div>
-    <script src="${leafletJsUri}"></script>
+    <script>${LEAFLET_JS}</script>
     <script>
       // ============================================================
       // Console log forwarding — sends WebView logs to React Native
