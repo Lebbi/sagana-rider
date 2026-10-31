@@ -308,13 +308,9 @@ export default function ActiveDeliveryPage() {
   }, [loadedOrderId, animateSheetTo]);
 
   const handleMapPress = useCallback(() => {
-    if (isSheetLowered) {
-      setIsSheetLowered(false);
-      animateSheetTo(SHEET_COLLAPSED_OFFSET);
-    } else {
-      setIsSheetLowered(true);
-    }
-  }, [isSheetLowered, animateSheetTo]);
+    setIsSheetLowered(true);
+    animateSheetTo(peekOffsetRef.current);
+  }, [animateSheetTo]);
 
   const allItemsChecked = useMemo(
     () => checkedItems.length > 0 && checkedItems.every(Boolean),
@@ -390,8 +386,10 @@ export default function ActiveDeliveryPage() {
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 4,
+        // Taps stay with the buttons and checkboxes; only a vertical drag takes over.
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_, gesture) =>
+          Math.abs(gesture.dy) > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
         onPanResponderGrant: () => {
           translateY.stopAnimation((currentValue: number) => {
             dragStartYRef.current = currentValue;
@@ -832,13 +830,14 @@ export default function ActiveDeliveryPage() {
             },
           ]}
           onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+          {...panResponder.panHandlers}
         >
           <View
             onLayout={(e) => {
               if (isSheetLowered) setPeekHeight(e.nativeEvent.layout.height);
             }}
           >
-          <View style={styles.sheetHandleArea} {...panResponder.panHandlers}>
+          <View style={styles.sheetHandleArea}>
             <View style={styles.sheetHandle} />
           </View>
 
