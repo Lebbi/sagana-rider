@@ -45,6 +45,7 @@ const removePhotoStyle = {
 const SHEET_COLLAPSED_OFFSET = 380;
 const SHEET_EXPANDED_OFFSET = 110;
 const DRAG_DISMISS_THRESHOLD = 64;
+const PEEK_HEIGHT_GUESS = 260;
 
 const CANCEL_REASONS: { value: CancelReason; label: string }[] = [
   { value: "vehicle_breakdown", label: "Vehicle Breakdown" },
@@ -276,6 +277,42 @@ export default function ActiveDeliveryPage() {
   const translateY = useRef(new Animated.Value(SHEET_COLLAPSED_OFFSET)).current;
   const dragStartYRef = useRef(SHEET_COLLAPSED_OFFSET);
 
+  const [isSheetLowered, setIsSheetLowered] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState(0);
+  const [peekHeight, setPeekHeight] = useState(PEEK_HEIGHT_GUESS);
+
+  const animateSheetTo = useCallback(
+    (toValue: number) =>
+      Animated.timing(translateY, {
+        toValue,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start(),
+    [translateY],
+  );
+
+  useEffect(() => {
+    if (isSheetLowered && sheetHeight > 0) {
+      animateSheetTo(Math.max(SHEET_COLLAPSED_OFFSET, sheetHeight - peekHeight));
+    }
+  }, [isSheetLowered, sheetHeight, peekHeight, animateSheetTo]);
+
+  const loadedOrderId = order?.orderId;
+  useEffect(() => {
+    setIsSheetLowered(false);
+    animateSheetTo(SHEET_COLLAPSED_OFFSET);
+  }, [loadedOrderId, animateSheetTo]);
+
+  const handleMapPress = useCallback(() => {
+    if (isSheetLowered) {
+      setIsSheetLowered(false);
+      animateSheetTo(SHEET_COLLAPSED_OFFSET);
+    } else {
+      setIsSheetLowered(true);
+    }
+  }, [isSheetLowered, animateSheetTo]);
+
   const allItemsChecked = useMemo(
     () => checkedItems.length > 0 && checkedItems.every(Boolean),
     [checkedItems],
@@ -353,6 +390,7 @@ export default function ActiveDeliveryPage() {
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 4,
         onPanResponderGrant: () => {
+          setIsSheetLowered(false);
           translateY.stopAnimation((currentValue: number) => {
             dragStartYRef.current = currentValue;
           });
@@ -549,6 +587,126 @@ export default function ActiveDeliveryPage() {
     ? (order.pickup.farmerPhoto ?? undefined)
     : (order.delivery.buyerPhoto ?? undefined);
 
+  const itemsChecklist = (
+    <>
+              <Text style={styles.sectionLabel}>ITEMS TO COLLECT</Text>
+              <View style={styles.checkboxGroup}>
+                {(order?.pickup.items ?? []).map((item, index) => {
+                  const itemLabel = formatOrderItem(item);
+                  return (
+                    <Pressable
+                      key={index}
+                      style={styles.checkboxRow}
+                      onPress={() => handleToggleItem(index)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{
+                        checked: checkedItems[index],
+                        disabled: activePhase !== 1,
+                      }}
+                      accessibilityLabel={`Mark item collected: ${itemLabel}`}
+                    >
+                      <MaterialIcons
+                        name={
+                          checkedItems[index]
+                            ? "check-box"
+                            : "check-box-outline-blank"
+                        }
+                        size={14}
+                        color={checkedItems[index] ? "#087434" : "#C4C4C4"}
+                      />
+                      <Text style={styles.baseText}>{itemLabel}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+    </>
+  );
+  const pickupPhotoButton = (
+              <Pressable
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  pickupPhoto ? { opacity: 0.5 } : null,
+                ]}
+                onPress={handleTakePickupPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo of produce at pickup"
+              >
+                <MaterialIcons
+                  name={pickupPhoto ? IconTheme.checkCircle : IconTheme.camera}
+                  size={20}
+                  color="#087434"
+                />
+                <Text style={styles.captureButtonText}>
+                  {pickupPhoto ? "PRODUCE PHOTO TAKEN" : "TAKE PHOTO OF PRODUCE"}
+                </Text>
+              </Pressable>
+  );
+  const deliveryPhotoButton = (
+              <Pressable
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  deliveryPhotos.length > 0 ? { opacity: 0.5 } : null,
+                ]}
+                onPress={handleTakeDeliveryPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Take photo of delivered package"
+              >
+                <MaterialIcons
+                  name={
+                    deliveryPhotos.length > 0
+                      ? IconTheme.checkCircle
+                      : IconTheme.camera
+                  }
+                  size={20}
+                  color="#087434"
+                />
+                <Text style={styles.captureButtonText}>
+                  {deliveryPhotos.length > 0
+                    ? "DELIVERY PHOTO TAKEN"
+                    : "TAKE PHOTO OF DELIVERY"}
+                </Text>
+              </Pressable>
+  );
+  const markDeliveredButton = (
+              <Pressable
+                style={[
+                  styles.captureButton,
+                  styles.captureButtonCompact,
+                  deliveryPhotos.length === 0
+                    ? { opacity: 0.4, backgroundColor: "#DCDCDC" }
+                    : { backgroundColor: "#087434" },
+                ]}
+                onPress={handleMarkDelivered}
+                disabled={isSyncingStatus || deliveryPhotos.length === 0}
+                accessibilityRole="button"
+                accessibilityLabel="Mark order as delivered"
+              >
+                {isSyncingStatus ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <MaterialIcons
+                      name={IconTheme.checkCircle}
+                      size={20}
+                      color={deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A"}
+                    />
+                    <Text
+                      style={[
+                        styles.captureButtonText,
+                        {
+                          color: deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A",
+                        },
+                      ]}
+                    >
+                      MARK AS DELIVERED
+                    </Text>
+                  </>
+                )}
+              </Pressable>
+  );
+
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
@@ -563,6 +721,7 @@ export default function ActiveDeliveryPage() {
             }
             destinationType={activePhase === 1 ? "pickup" : "delivery"}
             isDarkMode={isDarkMode}
+            onPress={handleMapPress}
           />
 
           {/* ETA badge overlay */}
@@ -672,11 +831,33 @@ export default function ActiveDeliveryPage() {
               transform: [{ translateY }],
             },
           ]}
+          onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
         >
+          <View
+            onLayout={(e) => {
+              if (isSheetLowered) setPeekHeight(e.nativeEvent.layout.height);
+            }}
+          >
           <View style={styles.sheetHandleArea} {...panResponder.panHandlers}>
             <View style={styles.sheetHandle} />
           </View>
 
+          {isSheetLowered ? (
+            <View style={styles.sheetBody}>
+              {isPhaseOne ? (
+                <>
+                  {itemsChecklist}
+                  {pickupPhotoButton}
+                </>
+              ) : (
+                <>
+                  {deliveryPhotoButton}
+                  {markDeliveredButton}
+                </>
+              )}
+            </View>
+          ) : (
+          <>
           <View style={styles.phasePillRow}>
             <View
               style={[
@@ -740,56 +921,9 @@ export default function ActiveDeliveryPage() {
 
               {mapPinMissing && <MapPinNote />}
 
-              <Text style={styles.sectionLabel}>ITEMS TO COLLECT</Text>
-              <View style={styles.checkboxGroup}>
-                {(order?.pickup.items ?? []).map((item, index) => {
-                  const itemLabel = formatOrderItem(item);
-                  return (
-                    <Pressable
-                      key={index}
-                      style={styles.checkboxRow}
-                      onPress={() => handleToggleItem(index)}
-                      accessibilityRole="checkbox"
-                      accessibilityState={{
-                        checked: checkedItems[index],
-                        disabled: activePhase !== 1,
-                      }}
-                      accessibilityLabel={`Mark item collected: ${itemLabel}`}
-                    >
-                      <MaterialIcons
-                        name={
-                          checkedItems[index]
-                            ? "check-box"
-                            : "check-box-outline-blank"
-                        }
-                        size={14}
-                        color={checkedItems[index] ? "#087434" : "#C4C4C4"}
-                      />
-                      <Text style={styles.baseText}>{itemLabel}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {itemsChecklist}
 
-              <Pressable
-                style={[
-                  styles.captureButton,
-                  styles.captureButtonCompact,
-                  pickupPhoto ? { opacity: 0.5 } : null,
-                ]}
-                onPress={handleTakePickupPhoto}
-                accessibilityRole="button"
-                accessibilityLabel="Take photo of produce at pickup"
-              >
-                <MaterialIcons
-                  name={pickupPhoto ? IconTheme.checkCircle : IconTheme.camera}
-                  size={20}
-                  color="#087434"
-                />
-                <Text style={styles.captureButtonText}>
-                  {pickupPhoto ? "PRODUCE PHOTO TAKEN" : "TAKE PHOTO OF PRODUCE"}
-                </Text>
-              </Pressable>
+              {pickupPhotoButton}
 
               {pickupPhoto && (
                 <View>
@@ -861,31 +995,7 @@ export default function ActiveDeliveryPage() {
                 </Text>
               ) : null}
 
-              <Pressable
-                style={[
-                  styles.captureButton,
-                  styles.captureButtonCompact,
-                  deliveryPhotos.length > 0 ? { opacity: 0.5 } : null,
-                ]}
-                onPress={handleTakeDeliveryPhoto}
-                accessibilityRole="button"
-                accessibilityLabel="Take photo of delivered package"
-              >
-                <MaterialIcons
-                  name={
-                    deliveryPhotos.length > 0
-                      ? IconTheme.checkCircle
-                      : IconTheme.camera
-                  }
-                  size={20}
-                  color="#087434"
-                />
-                <Text style={styles.captureButtonText}>
-                  {deliveryPhotos.length > 0
-                    ? "DELIVERY PHOTO TAKEN"
-                    : "TAKE PHOTO OF DELIVERY"}
-                </Text>
-              </Pressable>
+              {deliveryPhotoButton}
 
               {deliveryPhotos.length > 0 && (
                 <>
@@ -965,43 +1075,12 @@ export default function ActiveDeliveryPage() {
                 </Text>
               )}
 
-              <Pressable
-                style={[
-                  styles.captureButton,
-                  styles.captureButtonCompact,
-                  deliveryPhotos.length === 0
-                    ? { opacity: 0.4, backgroundColor: "#DCDCDC" }
-                    : { backgroundColor: "#087434" },
-                ]}
-                onPress={handleMarkDelivered}
-                disabled={isSyncingStatus || deliveryPhotos.length === 0}
-                accessibilityRole="button"
-                accessibilityLabel="Mark order as delivered"
-              >
-                {isSyncingStatus ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <MaterialIcons
-                      name={IconTheme.checkCircle}
-                      size={20}
-                      color={deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A"}
-                    />
-                    <Text
-                      style={[
-                        styles.captureButtonText,
-                        {
-                          color: deliveryPhotos.length > 0 ? "#FFFFFF" : "#7A7A7A",
-                        },
-                      ]}
-                    >
-                      MARK AS DELIVERED
-                    </Text>
-                  </>
-                )}
-              </Pressable>
+              {markDeliveredButton}
             </View>
           )}
+          </>
+          )}
+          </View>
         </Animated.View>
       </SafeAreaView>
 

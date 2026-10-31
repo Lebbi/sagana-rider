@@ -25,6 +25,7 @@ interface NativeMapViewProps {
   center?: GeoPoint;
   isDarkMode: boolean;
   onMapReady?: () => void;
+  onPress?: () => void;
 }
 
 export default function NativeMapView({
@@ -36,6 +37,7 @@ export default function NativeMapView({
   center,
   isDarkMode,
   onMapReady,
+  onPress,
 }: NativeMapViewProps) {
   const mapRef = useRef<any>(null);
   const colors = useColors();
@@ -95,6 +97,7 @@ export default function NativeMapView({
         mapType="standard"
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
+        onPress={onPress}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
