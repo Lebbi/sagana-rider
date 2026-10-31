@@ -1,0 +1,8 @@
+# Verification-only compose override for the sagana-backend stack.
+# Points the app at the isolated `sagana_verify` database so runs never touch the dev `sagana` database.
+# Usage (from sagana-backend/):
+#   docker compose -f docker-compose.yml -f <this file> up -d app nginx redis postgres
+services:
+  app:
+    environment:
+      DB_DATABASE: sagana_verify

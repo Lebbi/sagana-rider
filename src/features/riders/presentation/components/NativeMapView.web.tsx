@@ -8,6 +8,7 @@
  */
 
 import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
+import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
@@ -16,18 +17,21 @@ interface NativeMapViewProps {
   route: RouteResponse | null;
   riderLocation: GeoPoint | null;
   riderHeading: number | null;
-  destination: GeoPoint;
+  destination: GeoPoint | null;
   destinationType: "pickup" | "delivery";
+  center?: GeoPoint;
   isDarkMode: boolean;
   onMapReady?: () => void;
 }
 
 export default function NativeMapViewWeb({
   destination,
+  center,
   isDarkMode,
   onMapReady,
 }: NativeMapViewProps) {
   const colors = useColors();
+  const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
   // Signal "ready" immediately on web — tiles load asynchronously
   // but the container is interactive right away.
@@ -35,7 +39,7 @@ export default function NativeMapViewWeb({
 
   return (
     <View style={styles.container}>
-      <SimpleMapFallback destination={destination} isDarkMode={isDarkMode} />
+      <SimpleMapFallback destination={mapCenter} isDarkMode={isDarkMode} />
       <View style={styles.webBadge} pointerEvents="none">
         <ActivityIndicator size="small" color={colors.primary} />
         <Text style={[styles.webBadgeText, { color: colors.textSecondary }]}>

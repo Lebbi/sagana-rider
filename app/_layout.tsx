@@ -17,6 +17,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "react-native-reanimated";
 
 import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
+import { saganaToastConfig } from "@/components/ui/saganaToastConfig";
 import { UserProvider } from "@/context/UserContext";
 import Toast from "react-native-toast-message";
 
@@ -77,7 +78,7 @@ export default function RootLayout() {
           <Stack screenOptions={{ headerShown: false }} />
           {/* Toast host — required for handleApiSuccess/handleApiError to
               render. Without this, all toasts are silently invisible. */}
-          <Toast />
+          <Toast config={saganaToastConfig} />
       </UserProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

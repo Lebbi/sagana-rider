@@ -30,6 +30,7 @@ export interface UseRiderNavigationReturn {
   riderHeading: number | null;
   gpsAccuracy: number | null;
   gpsPermissionGranted: boolean;
+  locationStatus: "idle" | "requesting" | "granted" | "denied" | "failed";
 
   // Route
   route: RouteResponse | null;
@@ -68,6 +69,9 @@ export function useRiderNavigation(
   const [riderHeading, setRiderHeading] = useState<number | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsPermissionGranted, setGpsPermissionGranted] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<
+    "idle" | "requesting" | "granted" | "denied" | "failed"
+  >("idle");
 
   const [route, setRoute] = useState<RouteResponse | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -80,6 +84,9 @@ export function useRiderNavigation(
   );
   const isNavigatingRef = useRef(false);
   const lastBroadcastRef = useRef(0);
+  // Set when a phase switch happens before a GPS fix is available;
+  // the next watch tick flushes it and re-fetches the Phase 2 route.
+  const pendingRerouteRef = useRef(false);
 
   // ----------------------------------------------------------
   // Request GPS permission
@@ -90,6 +97,7 @@ export function useRiderNavigation(
       const { status } = await Location.requestForegroundPermissionsAsync();
       const granted = status === "granted";
       setGpsPermissionGranted(granted);
+      setLocationStatus(granted ? "requesting" : "denied");
 
       if (!granted && __DEV__) {
         console.warn("[useRiderNavigation] Location permission denied");
@@ -100,6 +108,7 @@ export function useRiderNavigation(
       if (__DEV__) {
         console.error("[useRiderNavigation] Error requesting permission:", e);
       }
+      setLocationStatus("denied");
       return false;
     }
   }, []);
@@ -158,6 +167,7 @@ export function useRiderNavigation(
       setRiderLocation(initialLocation);
       setRiderHeading(initialPos.coords.heading ?? null);
       setGpsAccuracy(initialPos.coords.accuracy ?? null);
+      setLocationStatus("granted");
 
       // Fetch route to destination
       await fetchRoute(initialLocation);
@@ -180,6 +190,12 @@ export function useRiderNavigation(
           setRiderLocation(newLocation);
           setRiderHeading(location.coords.heading ?? null);
           setGpsAccuracy(location.coords.accuracy ?? null);
+
+          // Flush a deferred phase-switch reroute once, then clear it.
+          if (pendingRerouteRef.current) {
+            pendingRerouteRef.current = false;
+            fetchRoute(newLocation);
+          }
 
           // Broadcast to backend (throttled)
           const now = Date.now();
@@ -206,6 +222,7 @@ export function useRiderNavigation(
       if (__DEV__) {
         console.error("[useRiderNavigation] Error starting navigation:", e);
       }
+      setLocationStatus("failed");
     }
   }, [requestLocationPermission, fetchRoute, orderId]);
 
@@ -277,8 +294,13 @@ export function useRiderNavigation(
   // ----------------------------------------------------------
 
   useEffect(() => {
-    if (riderLocation && isNavigatingRef.current) {
+    if (!isNavigatingRef.current) return;
+    if (riderLocation) {
       fetchRoute(riderLocation);
+    } else {
+      // No fix yet — defer the re-fetch until the next watch tick
+      // instead of dropping it (the effect deps do not list riderLocation).
+      pendingRerouteRef.current = true;
     }
   }, [destination, destinationType]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -297,6 +319,7 @@ export function useRiderNavigation(
     riderHeading,
     gpsAccuracy,
     gpsPermissionGranted,
+    locationStatus,
     route,
     currentStep,
     nextStep,

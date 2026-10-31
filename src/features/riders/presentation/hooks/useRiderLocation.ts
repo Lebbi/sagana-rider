@@ -80,10 +80,50 @@ export function useRiderLocation(): UseRiderLocationReturn {
     }
   }, [requestPermission]);
 
-  // Initial location fetch
+  // One-shot fetch for a fast first fix, then a continuous watch that keeps
+  // the coordinate current as the rider moves. The watch is started inside
+  // the effect with a `cancelled` flag and a closure-local subscription so
+  // that an unmount racing the async permission/watch resolves still tears
+  // the subscription down and never calls setState after unmount.
   useEffect(() => {
+    let cancelled = false;
+    let sub: Location.LocationSubscription | null = null;
+
     fetchLocation();
-  }, [fetchLocation]);
+
+    (async () => {
+      const granted = await requestPermission();
+      if (cancelled || !granted) return;
+      try {
+        sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 5 },
+          (pos) => {
+            if (cancelled) return;
+            setLocation({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            });
+            setAccuracy(pos.coords.accuracy ?? null);
+          },
+        );
+        if (cancelled) {
+          sub.remove();
+        }
+      } catch (e) {
+        if (__DEV__) {
+          console.error("[useRiderLocation] Watch error:", e);
+        }
+        if (!cancelled) {
+          setError("Failed to track location");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, [fetchLocation, requestPermission]);
 
   return {
     location,

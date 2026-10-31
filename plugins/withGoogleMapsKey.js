@@ -12,9 +12,11 @@
 const { withAndroidManifest } = require("expo/config-plugins");
 
 module.exports = function withGoogleMapsKey(config) {
-  config = withAndroidManifest(config, (config) => {
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  // config.exp.extra is empty at plugin evaluation time, so read the key
+  // from the env var that Expo loads from .env.local / EAS build env.
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
+  config = withAndroidManifest(config, (config) => {
     if (!apiKey) {
       console.warn(
         "[withGoogleMapsKey] GOOGLE_MAPS_API_KEY not set — maps will render blank in production.",
@@ -44,22 +46,16 @@ module.exports = function withGoogleMapsKey(config) {
   });
 
   // Store the key in app.extra so it can be read at runtime via
-  // Constants.extra.googleMapsApiKey. This avoids relying on
-  // process.env (injected via EAS secrets) which does not reach the
-  // JS bundle. We write to config.exp.extra which is the canonical
-  // field for custom extra data in Expo config plugins.
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  const extra = config.exp?.extra ?? {};
-  config = {
-    ...config,
-    exp: {
+  // Constants.extra.googleMapsApiKey. env vars do not reach the JS bundle.
+  if (apiKey) {
+    config.exp = {
       ...config.exp,
       extra: {
-        ...extra,
-        ...(apiKey ? { googleMapsApiKey: apiKey } : {}),
+        ...config.exp?.extra,
+        googleMapsApiKey: apiKey,
       },
-    },
-  };
+    };
+  }
 
   return config;
 };

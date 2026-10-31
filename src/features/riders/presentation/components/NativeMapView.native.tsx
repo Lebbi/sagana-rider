@@ -19,6 +19,7 @@
 import { MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
+import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -38,8 +39,9 @@ interface NativeMapViewProps {
   route: RouteResponse | null;
   riderLocation: GeoPoint | null;
   riderHeading: number | null;
-  destination: GeoPoint;
+  destination: GeoPoint | null;
   destinationType: "pickup" | "delivery";
+  center?: GeoPoint;
   isDarkMode: boolean;
   onMapReady?: () => void;
 }
@@ -50,10 +52,12 @@ export default function NativeMapView({
   riderHeading,
   destination,
   destinationType,
+  center,
   isDarkMode,
   onMapReady,
 }: NativeMapViewProps) {
   const colors = useColors();
+  const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
   // ── No Google Maps API key: tile grid fallback ────────────────
   if (!USE_NATIVE_MAP) {
@@ -62,6 +66,7 @@ export default function NativeMapView({
         destination={destination}
         destinationType={destinationType}
         isDarkMode={isDarkMode}
+        center={mapCenter}
         riderLocation={riderLocation}
         riderHeading={riderHeading}
         onMapReady={onMapReady}
@@ -77,10 +82,37 @@ export default function NativeMapView({
       riderHeading={riderHeading}
       destination={destination}
       destinationType={destinationType}
+      center={mapCenter}
       isDarkMode={isDarkMode}
       onMapReady={onMapReady}
     />
   );
+}
+
+// Project a geo point to a percentage position within the 3x3 tile grid
+// centered on `center` at zoom 13, clamped to the grid edge so a far-away
+// point still renders inside the fallback instead of off-screen.
+function geoToOverlayPercent(
+  center: GeoPoint,
+  point: GeoPoint,
+): { leftPct: number; topPct: number } {
+  const z = 13;
+  const n = Math.pow(2, z);
+  const fx = (lng: number) => ((lng + 180) / 360) * n;
+  const fy = (lat: number) => {
+    const latRad = (lat * Math.PI) / 180;
+    return (
+      ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n
+    );
+  };
+  const cx = Math.floor(fx(center.longitude));
+  const cy = Math.floor(fy(center.latitude));
+  const leftPct = 50 + (fx(point.longitude) - cx - 0.5) * (100 / 3);
+  const topPct = 50 + (fy(point.latitude) - cy - 0.5) * (100 / 3);
+  return {
+    leftPct: Math.max(2, Math.min(98, leftPct)),
+    topPct: Math.max(2, Math.min(98, topPct)),
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -91,13 +123,15 @@ function ExpoGoMap({
   destination,
   destinationType,
   isDarkMode,
+  center,
   riderLocation,
   riderHeading,
   onMapReady,
 }: {
-  destination: GeoPoint;
+  destination: GeoPoint | null;
   destinationType: "pickup" | "delivery";
   isDarkMode: boolean;
+  center: GeoPoint;
   riderLocation: GeoPoint | null;
   riderHeading: number | null;
   onMapReady?: () => void;
@@ -113,34 +147,46 @@ function ExpoGoMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const riderPos = riderLocation
+    ? geoToOverlayPercent(center, riderLocation)
+    : null;
+
   return (
     <View style={styles.container}>
-      {/* Esri tile grid — no native map module needed */}
-      <SimpleMapFallback destination={destination} isDarkMode={isDarkMode} />
+      {/* Esri tile grid — centered on `center` (rider when idle, destination on a delivery) */}
+      <SimpleMapFallback destination={center} isDarkMode={isDarkMode} />
 
-      {/* Destination marker — centered on the tile grid */}
-      <View style={styles.markerOverlay} pointerEvents="none">
-        <View style={styles.markerContainer}>
-          <View
-            style={[
-              styles.marker,
-              destinationType === "pickup"
-                ? styles.pickupMarker
-                : styles.deliveryMarker,
-            ]}
-          >
-            <MaterialIcons
-              name={destinationType === "pickup" ? "warehouse" : "home"}
-              size={22}
-              color="#FFFFFF"
-            />
+      {/* Destination marker — only when a destination is provided (active order) */}
+      {destination && (
+        <View style={styles.markerOverlay} pointerEvents="none">
+          <View style={styles.markerContainer}>
+            <View
+              style={[
+                styles.marker,
+                destinationType === "pickup"
+                  ? styles.pickupMarker
+                  : styles.deliveryMarker,
+              ]}
+            >
+              <MaterialIcons
+                name={destinationType === "pickup" ? "warehouse" : "home"}
+                size={22}
+                color="#FFFFFF"
+              />
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
-      {/* Rider marker — shown if GPS is available, positioned at center-top */}
-      {riderLocation && (
-        <View style={styles.riderMarkerOverlay} pointerEvents="none">
+      {/* Rider marker — geo-anchored to the rider's GPS within the tile grid */}
+      {riderPos && (
+        <View
+          style={[
+            styles.riderMarkerOverlay,
+            { left: `${riderPos.leftPct}%`, top: `${riderPos.topPct}%` },
+          ]}
+          pointerEvents="none"
+        >
           <View style={styles.markerContainer}>
             <View
               style={[
@@ -178,16 +224,18 @@ function NativeMap({
   riderHeading,
   destination,
   destinationType,
+  center,
   isDarkMode,
   onMapReady,
 }: NativeMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const colors = useColors();
   const [isLoading, setIsLoading] = useState(true);
+  const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
   const region = {
-    latitude: destination.latitude,
-    longitude: destination.longitude,
+    latitude: mapCenter.latitude,
+    longitude: mapCenter.longitude,
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
   };
@@ -196,7 +244,8 @@ function NativeMap({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const points: GeoPoint[] = [destination];
+    const points: GeoPoint[] = [];
+    if (destination) points.push(destination);
     if (riderLocation) points.push(riderLocation);
     if (route?.polyline?.length) points.push(...route.polyline);
 
@@ -212,17 +261,17 @@ function NativeMap({
       return;
     }
 
-    // With only 1 point (destination, no rider GPS yet), animate to it
+    // Single point (or none): center on the resolved map center
     mapRef.current.animateToRegion(
       {
-        latitude: destination.latitude,
-        longitude: destination.longitude,
+        latitude: mapCenter.latitude,
+        longitude: mapCenter.longitude,
         latitudeDelta: 0.02,
         longitudeDelta: 0.02,
       },
       500,
     );
-  }, [route, riderLocation, destination]);
+  }, [route, riderLocation, destination, mapCenter]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -252,30 +301,32 @@ function NativeMap({
         pitchEnabled={false}
       >
         {/* Destination marker */}
-        <Marker
-          coordinate={{
-            latitude: destination.latitude,
-            longitude: destination.longitude,
-          }}
-          tracksViewChanges={false}
-        >
-          <View style={styles.markerContainer}>
-            <View
-              style={[
-                styles.marker,
-                destinationType === "pickup"
-                  ? styles.pickupMarker
-                  : styles.deliveryMarker,
-              ]}
-            >
-              <MaterialIcons
-                name={destinationType === "pickup" ? "warehouse" : "home"}
-                size={22}
-                color="#FFFFFF"
-              />
+        {destination && (
+          <Marker
+            coordinate={{
+              latitude: destination.latitude,
+              longitude: destination.longitude,
+            }}
+            tracksViewChanges={false}
+          >
+            <View style={styles.markerContainer}>
+              <View
+                style={[
+                  styles.marker,
+                  destinationType === "pickup"
+                    ? styles.pickupMarker
+                    : styles.deliveryMarker,
+                ]}
+              >
+                <MaterialIcons
+                  name={destinationType === "pickup" ? "warehouse" : "home"}
+                  size={22}
+                  color="#FFFFFF"
+                />
+              </View>
             </View>
-          </View>
-        </Marker>
+          </Marker>
+        )}
 
         {/* Rider marker */}
         {riderLocation && (
@@ -355,10 +406,10 @@ const styles = StyleSheet.create({
   },
   riderMarkerOverlay: {
     position: "absolute",
-    top: "30%",
-    left: 0,
-    right: 0,
+    width: 0,
+    height: 0,
     alignItems: "center",
+    justifyContent: "center",
   },
   markerContainer: {
     alignItems: "center",

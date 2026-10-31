@@ -10,17 +10,19 @@
 
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "@/lib/maps/LazyReactNativeMaps";
 
 interface NativeMapViewProps {
   route: RouteResponse | null;
   riderLocation: GeoPoint | null;
   riderHeading: number | null;
-  destination: GeoPoint;
+  destination: GeoPoint | null;
   destinationType: "pickup" | "delivery";
+  center?: GeoPoint;
   isDarkMode: boolean;
   onMapReady?: () => void;
 }
@@ -31,17 +33,19 @@ export default function NativeMapView({
   riderHeading,
   destination,
   destinationType,
+  center,
   isDarkMode,
   onMapReady,
 }: NativeMapViewProps) {
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<any>(null);
   const colors = useColors();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
   const region = {
-    latitude: destination.latitude,
-    longitude: destination.longitude,
+    latitude: mapCenter.latitude,
+    longitude: mapCenter.longitude,
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
   };
@@ -50,7 +54,8 @@ export default function NativeMapView({
   useEffect(() => {
     if (!mapRef.current) return;
 
-    const points: GeoPoint[] = [destination];
+    const points: GeoPoint[] = [];
+    if (destination) points.push(destination);
     if (riderLocation) points.push(riderLocation);
     if (route?.polyline?.length) points.push(...route.polyline);
 
@@ -73,12 +78,6 @@ export default function NativeMapView({
     onMapReady?.();
   }, [onMapReady]);
 
-  const handleError = useCallback(() => {
-    setHasError(true);
-    setIsLoading(false);
-    if (__DEV__) console.error("[NativeMapView] MapView onError fired");
-  }, []);
-
   return (
     <View style={styles.container}>
       <MapView
@@ -96,39 +95,38 @@ export default function NativeMapView({
         mapType="standard"
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
-        // @ts-expect-error — onError exists at runtime in react-native-maps
-        // but is missing from the MapViewProps type definitions in 1.27.2.
-        onError={handleError}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
         pitchEnabled={false}
       >
         {/* Destination marker */}
-        <Marker
-          coordinate={{
-            latitude: destination.latitude,
-            longitude: destination.longitude,
-          }}
-          tracksViewChanges={false}
-        >
-          <View style={styles.markerContainer}>
-            <View
-              style={[
-                styles.marker,
-                destinationType === "pickup"
-                  ? styles.pickupMarker
-                  : styles.deliveryMarker,
-              ]}
-            >
-              <MaterialIcons
-                name={destinationType === "pickup" ? "warehouse" : "home"}
-                size={22}
-                color="#FFFFFF"
-              />
+        {destination && (
+          <Marker
+            coordinate={{
+              latitude: destination.latitude,
+              longitude: destination.longitude,
+            }}
+            tracksViewChanges={false}
+          >
+            <View style={styles.markerContainer}>
+              <View
+                style={[
+                  styles.marker,
+                  destinationType === "pickup"
+                    ? styles.pickupMarker
+                    : styles.deliveryMarker,
+                ]}
+              >
+                <MaterialIcons
+                  name={destinationType === "pickup" ? "warehouse" : "home"}
+                  size={22}
+                  color="#FFFFFF"
+                />
+              </View>
             </View>
-          </View>
-        </Marker>
+          </Marker>
+        )}
 
         {/* Rider marker */}
         {riderLocation && (

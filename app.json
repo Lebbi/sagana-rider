@@ -68,7 +68,8 @@
       "eas": {
         "projectId": "72f78b72-c647-4ed3-87e4-00cafbc0f596"
       },
-      "router": {}
+      "router": {},
+      "googleMapsApiKey": ""
     },
     "owner": "lebbb1"
   }

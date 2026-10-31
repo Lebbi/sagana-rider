@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Pressable,
+    RefreshControl,
     ScrollView,
     Switch,
     Text,
@@ -23,6 +24,7 @@ import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 import { useRiderLocation, calculateDistance } from "@/features/riders/presentation/hooks/useRiderLocation";
+import { getOrderCardRoute } from "@/features/riders/presentation/utils/orderNavigation";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
 
@@ -87,16 +89,7 @@ function DriverOrderCardView({
   const isAvailable = order.status === "searching";
 
   const handleCardPress = () => {
-    if (isAvailable) {
-      // Navigate to order detail screen for pre-accept preview
-      router.push(`/rider/orders/${order.orderId}` as never);
-    } else if (isActive) {
-      // Navigate to active delivery
-      router.push({
-        pathname: "/tabs/ActiveDeliveryPage",
-        params: { orderId: String(order.orderId) },
-      } as never);
-    }
+    router.push(getOrderCardRoute(order) as never);
   };
 
   return (
@@ -219,29 +212,8 @@ export default function DriverHomepageScreen() {
   const [availableOrders, setAvailableOrders] = useState<RiderOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
-
-  // Fetch rider settings on mount — sync into the shared context so the
-  // auto-accept engine picks them up.
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const settings = await getRiderSettings();
-        if (!mounted) return;
-        setAutoAcceptEnabled(settings.autoAccept);
-        setIsOnline(settings.isOnline);
-      } catch (e) {
-        if (__DEV__) {
-          console.warn("[RiderHome] Failed to load settings:", e);
-        }
-      } finally {
-        if (mounted) setIsLoadingSettings(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [setAutoAcceptEnabled, setIsOnline]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   // Fetch orders (also used to refresh after accept)
   const fetchOrders = useCallback(async () => {
@@ -262,9 +234,11 @@ export default function DriverHomepageScreen() {
       const available = allOrders.filter(
         (o) => o.status === "searching",
       );
+
       setActiveOrder(active);
       setAvailableOrders(available);
-    } catch (e) {
+    } catch (e: any) {
+      console.error('[RiderHome] Failed to load orders:', e?.message, e?.response?.status, e?.response?.data);
       if (__DEV__) {
         console.warn("[RiderHome] Failed to load orders:", e);
       }
@@ -272,6 +246,41 @@ export default function DriverHomepageScreen() {
       setIsLoadingOrders(false);
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchOrders();
+      await refreshLocation();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchOrders, refreshLocation]);
+
+  // Fetch rider settings on mount — sync into the shared context so the
+  // auto-accept engine picks them up. Then fetch orders with correct isOnDuty.
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const settings = await getRiderSettings();
+        if (!mounted) return;
+        setAutoAcceptEnabled(settings.autoAccept);
+        setIsOnline(settings.isOnline);
+        // Fetch orders AFTER settings are loaded so isOnDuty is correct for backend filtering
+        await fetchOrders();
+      } catch (e) {
+        if (__DEV__) {
+          console.warn("[RiderHome] Failed to load settings:", e);
+        }
+      } finally {
+        if (mounted) setIsLoadingSettings(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [setAutoAcceptEnabled, setIsOnline, fetchOrders]);
 
   // Re-fetch orders every time the Home tab gains focus — keeps Active
   // Delivery and Available Orders fresh after returning from Active
@@ -281,6 +290,18 @@ export default function DriverHomepageScreen() {
       fetchOrders();
     }, [fetchOrders]),
   );
+
+  // Also refetch when on-duty status changes (e.g., rider toggles the switch)
+  useEffect(() => {
+    if (!isLoadingSettings) {
+      fetchOrders();
+    }
+  }, [isOnDuty, isLoadingSettings, fetchOrders]);
+
+  // Debug: Log auto-accept phase changes to understand order disappearance
+  useEffect(() => {
+    console.log('[RiderHome] Auto-accept phase:', autoAcceptPhase, '| isOnDuty:', isOnDuty, '| autoAcceptEnabled:', autoAcceptEnabled);
+  }, [autoAcceptPhase, isOnDuty, autoAcceptEnabled]);
 
   // Accept an available order — assigns it to this rider and moves it to
   // the active column after the refresh.
@@ -322,6 +343,8 @@ export default function DriverHomepageScreen() {
       setAutoAcceptEnabled(value);
       try {
         await updateRiderSettings({ autoAccept: value });
+        // Refetch orders - backend behavior may change with auto-accept setting
+        await fetchOrders();
       } catch (e) {
         if (__DEV__) {
           console.warn("[RiderHome] Failed to update auto-accept:", e);
@@ -329,7 +352,7 @@ export default function DriverHomepageScreen() {
         setAutoAcceptEnabled(!value);
       }
     },
-    [setAutoAcceptEnabled],
+    [setAutoAcceptEnabled, fetchOrders],
   );
 
   // Toggle on-duty — persist to backend; context state drives the engine
@@ -338,6 +361,8 @@ export default function DriverHomepageScreen() {
       setIsOnline(value);
       try {
         await updateRiderSettings({ isOnline: value });
+        // Refetch orders when duty status changes - backend may show/hide searching orders
+        await fetchOrders();
       } catch (e) {
         if (__DEV__) {
           console.warn("[RiderHome] Failed to update online status:", e);
@@ -345,32 +370,47 @@ export default function DriverHomepageScreen() {
         setIsOnline(!value);
       }
     },
-    [setIsOnline],
+    [setIsOnline, fetchOrders],
   );
 
-  // Destination for the mini-map — from active order or default center
-  const mapDestination: GeoPoint = activeOrder
+  // Destination for the mini-map — from the active order, or null when idle.
+  // Center on the rider's live GPS when idle (fallback to the service-area
+  // default if no fix yet), and on the delivery destination when on a delivery.
+  const mapDestination: GeoPoint | null = activeOrder
     ? {
         latitude: activeOrder.delivery.address.latitude,
         longitude: activeOrder.delivery.address.longitude,
       }
-    : DEFAULT_MAP_CENTER;
+    : null;
+  // Center on the delivery when on a delivery, otherwise on the rider's
+  // live GPS (falling back to the service-area default until a fix arrives).
+  const mapCenter: GeoPoint = mapDestination ?? riderLocation ?? DEFAULT_MAP_CENTER;
 
   const activeCard = activeOrder ? toOrderCard(activeOrder, true, riderLocation ?? undefined) : null;
   const availableCards = availableOrders
     .map((o) => toOrderCard(o, false, riderLocation ?? undefined))
-    .filter((card) => {
-      // Filter: only show orders within 10km of rider's current location
-      if (!riderLocation || card.pickupDistance === null) return true; // Show if no location yet
-      return card.pickupDistance <= 10000; // 10km max
+    .sort((a, b) => {
+      // Sort by pickup distance, closest first. Unknown distances sink to the end.
+      const aD = a.pickupDistance ?? Infinity;
+      const bD = b.pickupDistance ?? Infinity;
+      return aD - bD;
     });
 
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <ScrollView
+          ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
         >
           <View style={styles.header}>
             <Image
@@ -426,10 +466,11 @@ export default function DriverHomepageScreen() {
             {/* INTERACTIVE MAP — pinch zoom, pan, markers */}
             <NativeMapView
               route={null}
-              riderLocation={null}
+              riderLocation={riderLocation ?? null}
               riderHeading={null}
               destination={mapDestination}
               destinationType="delivery"
+              center={mapCenter}
               isDarkMode={false}
             />
 
