@@ -271,7 +271,11 @@ export default function ActiveDeliveryPage() {
     const syncPickupComplete = async () => {
       setIsSyncingStatus(true);
       try {
-        await updateOrderStatus(order?.orderId ?? numericOrderId, "picked_up", pickupPhoto);
+        const orderId = order?.orderId ?? numericOrderId;
+        await updateOrderStatus(orderId, "picked_up", pickupPhoto);
+        // Rider now heads to the buyer: farmer screen flips to In Transit.
+        // Best effort — pickup is already saved and "delivered" may skip this step.
+        updateOrderStatus(orderId, "to_delivery").catch(() => {});
         setShowPhaseTransition(true);
         setTimeout(() => {
           setShowPhaseTransition(false);
