@@ -33,11 +33,14 @@ function formatAddressShort(addr: {
   street: string;
   barangay: string;
   city: string;
+  province: string;
+  coordinatesMissing?: boolean;
 }): string {
-  return (
-    [addr.street, addr.barangay, addr.city].filter(Boolean).join(", ") ||
-    "Address pending"
-  );
+  const text =
+    [addr.street, addr.barangay, addr.city, addr.province]
+      .filter(Boolean)
+      .join(", ") || "Address pending";
+  return addr.coordinatesMissing ? `${text} (map pin not set)` : text;
 }
 
 /** Formats a RiderOrder into the display shape used by the card component. */
