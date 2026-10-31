@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     Animated,
     Easing,
+    GestureResponderEvent,
     Modal,
     PanResponder,
     Pressable,
@@ -311,6 +312,27 @@ export default function ActiveDeliveryPage() {
     setIsSheetLowered(true);
     animateSheetTo(peekOffsetRef.current);
   }, [animateSheetTo]);
+
+  // The map's own onPress is not delivered by every map implementation (the
+  // tile fallback has none), so a short, near-stationary touch on the map
+  // wrapper counts as a tap.
+  const mapTouchRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const handleMapTouchStart = useCallback((e: GestureResponderEvent) => {
+    const { pageX, pageY, touches } = e.nativeEvent;
+    mapTouchRef.current =
+      touches.length === 1 ? { x: pageX, y: pageY, t: Date.now() } : null;
+  }, []);
+  const handleMapTouchEnd = useCallback(
+    (e: GestureResponderEvent) => {
+      const start = mapTouchRef.current;
+      mapTouchRef.current = null;
+      if (!start) return;
+      const { pageX, pageY } = e.nativeEvent;
+      const moved = Math.hypot(pageX - start.x, pageY - start.y);
+      if (moved < 10 && Date.now() - start.t < 400) handleMapPress();
+    },
+    [handleMapPress],
+  );
 
   const allItemsChecked = useMemo(
     () => checkedItems.length > 0 && checkedItems.every(Boolean),
@@ -710,6 +732,11 @@ export default function ActiveDeliveryPage() {
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <View style={styles.mapArea}>
           {/* LIVE MAP — replaces static PNG */}
+          <View
+            style={{ flex: 1 }}
+            onTouchStart={handleMapTouchStart}
+            onTouchEnd={handleMapTouchEnd}
+          >
           <NativeMapView
             route={nav.route}
             riderLocation={nav.riderLocation}
@@ -721,6 +748,7 @@ export default function ActiveDeliveryPage() {
             isDarkMode={isDarkMode}
             onPress={handleMapPress}
           />
+          </View>
 
           {/* ETA badge overlay */}
           <View style={styles.etaBadgeOverlay}>
