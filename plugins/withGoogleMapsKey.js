@@ -48,13 +48,7 @@ module.exports = function withGoogleMapsKey(config) {
   // Store the key in app.extra so it can be read at runtime via
   // Constants.extra.googleMapsApiKey. env vars do not reach the JS bundle.
   if (apiKey) {
-    config.exp = {
-      ...config.exp,
-      extra: {
-        ...config.exp?.extra,
-        googleMapsApiKey: apiKey,
-      },
-    };
+    config.extra = { ...config.extra, googleMapsApiKey: apiKey };
   }
 
   return config;

@@ -7,7 +7,7 @@
     "icon": "./assets/branding/official_sagana_logo.png",
     "scheme": "saganarider",
     "userInterfaceStyle": "light",
-        "ios": {
+    "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.sagana.rider",
       "infoPlist": {
@@ -61,16 +61,16 @@
       "expo-asset",
       "./plugins/withGoogleMapsKey"
     ],
-      "experiments": {
+    "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
-        "projectId": "72f78b72-c647-4ed3-87e4-00cafbc0f596"
+        "projectId": "09d0fb20-537b-4263-9cfb-4d33e37ec5ca"
       },
       "router": {},
       "googleMapsApiKey": ""
     },
-    "owner": "lebbb1"
+    "owner": "lebbb2"
   }
 }
