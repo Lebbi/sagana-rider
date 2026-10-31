@@ -292,11 +292,14 @@ export default function ActiveDeliveryPage() {
     [translateY],
   );
 
+  // Lowest stop: the sheet top sits so only the handle + checklist/photo show.
+  const peekOffset = Math.max(SHEET_COLLAPSED_OFFSET, sheetHeight - peekHeight);
+  const peekOffsetRef = useRef(peekOffset);
+  peekOffsetRef.current = peekOffset;
+
   useEffect(() => {
-    if (isSheetLowered && sheetHeight > 0) {
-      animateSheetTo(Math.max(SHEET_COLLAPSED_OFFSET, sheetHeight - peekHeight));
-    }
-  }, [isSheetLowered, sheetHeight, peekHeight, animateSheetTo]);
+    if (isSheetLowered && sheetHeight > 0) animateSheetTo(peekOffset);
+  }, [isSheetLowered, sheetHeight, peekOffset, animateSheetTo]);
 
   const loadedOrderId = order?.orderId;
   useEffect(() => {
@@ -390,53 +393,50 @@ export default function ActiveDeliveryPage() {
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 4,
         onPanResponderGrant: () => {
-          setIsSheetLowered(false);
           translateY.stopAnimation((currentValue: number) => {
             dragStartYRef.current = currentValue;
           });
         },
         onPanResponderMove: (_, gesture) => {
           const nextValue = dragStartYRef.current + gesture.dy;
-          const clamped = Math.max(
-            SHEET_EXPANDED_OFFSET,
-            Math.min(SHEET_COLLAPSED_OFFSET, nextValue),
+          translateY.setValue(
+            Math.max(
+              SHEET_EXPANDED_OFFSET,
+              Math.min(peekOffsetRef.current, nextValue),
+            ),
           );
-          translateY.setValue(clamped);
         },
         onPanResponderRelease: (_, gesture) => {
-          const currentValue = dragStartYRef.current + gesture.dy;
-          const isDraggingUp = gesture.dy < -DRAG_DISMISS_THRESHOLD;
-          const snapTo = isDraggingUp
-            ? SHEET_EXPANDED_OFFSET
-            : SHEET_COLLAPSED_OFFSET;
-          const clamped = Math.max(
+          // Snap stops, top to bottom: expanded, default, peek (below the photo button).
+          const stops = [
             SHEET_EXPANDED_OFFSET,
-            Math.min(SHEET_COLLAPSED_OFFSET, currentValue),
+            SHEET_COLLAPSED_OFFSET,
+            peekOffsetRef.current,
+          ];
+          const current = dragStartYRef.current + gesture.dy;
+          const nearest = stops.reduce((a, b) =>
+            Math.abs(b - current) < Math.abs(a - current) ? b : a,
           );
+          // A decisive flick moves one stop in its direction.
+          const from = stops.reduce((a, b) =>
+            Math.abs(b - dragStartYRef.current) <
+            Math.abs(a - dragStartYRef.current)
+              ? b
+              : a,
+          );
+          const fromIdx = stops.indexOf(from);
+          const target =
+            gesture.dy > DRAG_DISMISS_THRESHOLD
+              ? stops[Math.min(stops.length - 1, fromIdx + 1)]
+              : gesture.dy < -DRAG_DISMISS_THRESHOLD
+                ? stops[Math.max(0, fromIdx - 1)]
+                : nearest;
 
-          Animated.timing(translateY, {
-            toValue:
-              Math.abs(gesture.dy) > DRAG_DISMISS_THRESHOLD ? snapTo : clamped,
-            duration: 220,
-            easing: Easing.out(Easing.cubic),
-            useNativeDriver: false,
-          }).start(() => {
-            if (Math.abs(gesture.dy) <= DRAG_DISMISS_THRESHOLD) {
-              const nearest =
-                Math.abs(clamped - SHEET_EXPANDED_OFFSET) <
-                Math.abs(clamped - SHEET_COLLAPSED_OFFSET)
-                  ? SHEET_EXPANDED_OFFSET
-                  : SHEET_COLLAPSED_OFFSET;
-              Animated.timing(translateY, {
-                toValue: nearest,
-                duration: 150,
-                useNativeDriver: false,
-              }).start();
-            }
-          });
+          setIsSheetLowered(target === peekOffsetRef.current);
+          animateSheetTo(target);
         },
       }),
-    [translateY],
+    [translateY, animateSheetTo],
   );
 
   const handleToggleItem = (itemIndex: number) => {
@@ -843,7 +843,7 @@ export default function ActiveDeliveryPage() {
           </View>
 
           {isSheetLowered ? (
-            <View style={styles.sheetBody}>
+            <View style={[styles.sheetBody, { paddingBottom: 16 }]}>
               {isPhaseOne ? (
                 <>
                   {itemsChecklist}
