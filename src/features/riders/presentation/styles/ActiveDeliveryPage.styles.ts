@@ -63,12 +63,12 @@ export const styles = StyleSheet.create({
   },
   topBarName: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 12,
+    fontSize: 14.4,
     color: "#101010",
   },
   topBarNumber: {
     fontFamily: "StackSansHeadline_500Medium",
-    fontSize: 10,
+    fontSize: 12,
     color: "#101010",
     marginTop: 1,
   },
@@ -100,7 +100,7 @@ export const styles = StyleSheet.create({
   },
   etaBadgeText: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 8,
+    fontSize: 9.6,
     color: "#FFFFFF",
   },
   mapControlButton: {
@@ -156,7 +156,7 @@ export const styles = StyleSheet.create({
   },
   phasePillText: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 8,
+    fontSize: 9.6,
     color: "#A2A2A2",
     textAlign: "center",
   },
@@ -176,13 +176,13 @@ export const styles = StyleSheet.create({
   },
   badgeText: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 8,
+    fontSize: 9.6,
     color: "#FFFFFF",
   },
   mainTargetName: {
     marginTop: 10,
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 13,
+    fontSize: 15.6,
     color: "#141414",
   },
   locationRow: {
@@ -194,14 +194,14 @@ export const styles = StyleSheet.create({
   },
   baseText: {
     fontFamily: "StackSansHeadline_500Medium",
-    fontSize: 8,
+    fontSize: 9.6,
     color: "#1B1B1B",
-    lineHeight: 13,
+    lineHeight: 15.6,
   },
   sectionLabel: {
     marginBottom: 8,
     fontFamily: "StackSansHeadline_400Regular",
-    fontSize: 8,
+    fontSize: 9.6,
     color: "#7A7A7A",
     letterSpacing: 0.3,
   },
@@ -231,7 +231,7 @@ export const styles = StyleSheet.create({
   },
   captureButtonText: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 13 / 2,
+    fontSize: 7.8,
     color: "#087434",
     letterSpacing: 0.8,
   },
@@ -254,7 +254,7 @@ export const styles = StyleSheet.create({
   },
   phaseTransitionText: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 11,
+    fontSize: 13.2,
     color: "#1E1E1E",
   },
 
@@ -278,12 +278,12 @@ export const styles = StyleSheet.create({
   },
   cancelModalTitle: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 16,
+    fontSize: 19.2,
     color: "#1E1E1E",
   },
   cancelModalSubtitle: {
     fontFamily: "StackSansHeadline_500Medium",
-    fontSize: 11,
+    fontSize: 13.2,
     color: "#7A7A7A",
     textAlign: "center",
     marginBottom: 8,
@@ -320,7 +320,7 @@ export const styles = StyleSheet.create({
   },
   cancelReasonLabel: {
     fontFamily: "StackSansHeadline_500Medium",
-    fontSize: 12,
+    fontSize: 14.4,
     color: "#1E1E1E",
     flex: 1,
   },
@@ -341,7 +341,7 @@ export const styles = StyleSheet.create({
   },
   cancelModalButtonTextSecondary: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 12,
+    fontSize: 14.4,
     color: "#1E1E1E",
   },
   cancelModalButtonPrimary: {
@@ -357,7 +357,7 @@ export const styles = StyleSheet.create({
   },
   cancelModalButtonTextPrimary: {
     fontFamily: "StackSansHeadline_700Bold",
-    fontSize: 12,
+    fontSize: 14.4,
     color: "#FFFFFF",
   },
 });

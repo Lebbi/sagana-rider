@@ -106,7 +106,7 @@ function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?:
 
 function MapPinNote() {
   return (
-    <Text style={{ fontSize: 9, color: "#ba1a1a", marginTop: 4 }}>
+    <Text style={{ fontSize: 10.8, color: "#ba1a1a", marginTop: 4 }}>
       Map pin not set. Confirm the exact address by phone before heading out.
     </Text>
   );
@@ -564,7 +564,7 @@ export default function ActiveDeliveryPage() {
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator size="large" color="#087434" />
-            <Text style={{ marginTop: 12, fontSize: 12, color: "#7A7A7A" }}>
+            <Text style={{ marginTop: 12, fontSize: 14.4, color: "#7A7A7A" }}>
               Loading order...
             </Text>
           </View>
@@ -581,10 +581,10 @@ export default function ActiveDeliveryPage() {
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
             <MaterialIcons name="check-circle-outline" size={64} color="#087434" />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: "600", color: "#1B1B1B", textAlign: "center" }}>
+            <Text style={{ marginTop: 16, fontSize: 19.2, fontWeight: "600", color: "#1B1B1B", textAlign: "center" }}>
               No Active Delivery
             </Text>
-            <Text style={{ marginTop: 8, fontSize: 12, color: "#7A7A7A", textAlign: "center" }}>
+            <Text style={{ marginTop: 8, fontSize: 14.4, color: "#7A7A7A", textAlign: "center" }}>
               Accept an order from the Home tab to start a delivery.
             </Text>
           </View>
@@ -978,7 +978,7 @@ export default function ActiveDeliveryPage() {
               {!pickupPhoto && allItemsChecked && (
                 <Text
                   style={{
-                    fontSize: 9,
+                    fontSize: 10.8,
                     color: "#ba1a1a",
                     marginTop: 8,
                     textAlign: "center",
@@ -1078,7 +1078,7 @@ export default function ActiveDeliveryPage() {
                     <Text
                       style={{
                         fontFamily: "StackSansHeadline_700Bold",
-                        fontSize: 8,
+                        fontSize: 9.6,
                         color: "#087434",
                         letterSpacing: 0.5,
                       }}
@@ -1092,7 +1092,7 @@ export default function ActiveDeliveryPage() {
               {!deliveryPhotos.length && (
                 <Text
                   style={{
-                    fontSize: 9,
+                    fontSize: 10.8,
                     color: "#ba1a1a",
                     marginTop: 8,
                     textAlign: "center",
