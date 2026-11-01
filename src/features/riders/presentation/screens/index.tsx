@@ -62,6 +62,7 @@ function toOrderCard(order: RiderOrder, isActive: boolean, riderLoc?: GeoPoint) 
   return {
     id: String(order.orderId),
     orderId: order.orderId,
+    orderNumber: order.orderNumber,
     amountLabel: `₱${order.shippingFee.toFixed(2)}`,
     recipientLabel: `${order.delivery.buyerName} ${order.delivery.buyerPhone}`,
     pickupLabel: order.pickup.farmerName,
@@ -109,6 +110,7 @@ function DriverOrderCardView({
       </View>
 
       <Text style={styles.recipientText}>{order.recipientLabel}</Text>
+      <Text style={styles.routeSubText}>Order {order.orderNumber}</Text>
 
       <View style={styles.routeRow}>
         <View style={[styles.routeDot, styles.pickupDot]} />
@@ -154,7 +156,7 @@ function DriverOrderCardView({
             }}
             disabled={acceptInFlight}
             accessibilityRole="button"
-            accessibilityLabel={`Accept order ${order.orderId}`}
+            accessibilityLabel={`Accept order ${order.orderNumber}`}
           >
             {acceptInFlight ? (
               <ActivityIndicator size="small" color={colors.white} />

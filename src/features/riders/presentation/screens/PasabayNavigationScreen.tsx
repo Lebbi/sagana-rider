@@ -323,7 +323,7 @@ export default function PasabayNavigationScreen() {
                 <Text
                   style={[styles.sheetSubtitle, { color: colors.textMuted }]}
                 >
-                  Order #{currentStop.orderId} • Stop {currentStopIndex + 1} of{" "}
+                  Order {batch?.orders.find((o) => o.orderId === currentStop.orderId)?.orderNumber} • Stop {currentStopIndex + 1} of{" "}
                   {totalStops}
                 </Text>
               </View>

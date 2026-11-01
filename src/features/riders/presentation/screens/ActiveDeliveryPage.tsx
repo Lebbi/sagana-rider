@@ -789,6 +789,7 @@ export default function ActiveDeliveryPage() {
             <View style={styles.topBarTextWrap}>
               <Text style={styles.topBarName}>{headerName}</Text>
               <Text style={styles.topBarNumber}>{headerNumber}</Text>
+              <Text style={styles.topBarNumber}>Order {order?.orderNumber}</Text>
             </View>
             <View style={styles.topBarActions}>
               {isPhaseOne && (

@@ -170,6 +170,7 @@ export default function OrderPreviewSheet({
         </View>
 
         <View style={[styles.panel, { paddingBottom: 16 + insets.bottom }]}>
+          <Text style={styles.stopAddress}>Order {order.orderNumber}</Text>
           <View style={styles.panelHeader}>
             <Text style={styles.fare}>{`₱${order.shippingFee.toFixed(2)}`}</Text>
             {routeState === "loading" ? (
