@@ -1,7 +1,10 @@
 import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 
 import { stylesFactory } from "@/features/riders/presentation/styles/RiderWalletPage.styles";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
@@ -11,6 +14,7 @@ import { useCallback, useState } from "react";
 export default function RiderWalletPage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
+  const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -48,8 +52,8 @@ export default function RiderWalletPage() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.headerTitle}>Wallet</Text>
         </View>
 

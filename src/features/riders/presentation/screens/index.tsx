@@ -12,7 +12,10 @@ import {
 } from "react-native";
 
 import { stylesFactory } from "@/features/riders/presentation/styles/index.styles";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { useAutoAccept } from "@/context/AutoAcceptContext";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
@@ -205,6 +208,7 @@ function DriverOrderCardView({
 export default function DriverHomepageScreen() {
   const colors = useColors();
   const styles = stylesFactory(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   // Auto-accept + duty state now lives in AutoAcceptProvider so the
   // engine (mounted at tabs layout) reads the same values the rider
@@ -415,7 +419,7 @@ export default function DriverHomepageScreen() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <ScrollView
           ref={scrollViewRef}
           showsVerticalScrollIndicator={false}
@@ -429,7 +433,7 @@ export default function DriverHomepageScreen() {
             />
           }
         >
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
             <Image
               source={BRAND_LOGO}
               style={styles.logo}

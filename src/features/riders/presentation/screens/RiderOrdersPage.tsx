@@ -19,7 +19,10 @@ import {
 } from "react-native";
 
 import { stylesFactory } from "@/features/riders/presentation/styles/RiderOrdersPage.styles";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { scale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
@@ -83,6 +86,7 @@ function formatDate(iso: string): string {
 export default function RiderOrdersPage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<OrderTab>("All");
 
@@ -173,8 +177,8 @@ export default function RiderOrdersPage() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <View style={styles.header}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.headerTitle}>Orders</Text>
         </View>
 

@@ -36,6 +36,9 @@ export const styles = StyleSheet.create({
     right: 12,
     zIndex: 10,
   },
+  statusBarStrip: {
+    backgroundColor: "#CEEDB2",
+  },
   topBar: {
     position: "absolute",
     top: 0,

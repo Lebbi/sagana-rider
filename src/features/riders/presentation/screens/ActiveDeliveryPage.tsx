@@ -732,7 +732,8 @@ export default function ActiveDeliveryPage() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
+        <View style={[styles.statusBarStrip, { height: insets.top }]} />
         <View style={styles.mapArea}>
           {/* LIVE MAP — replaces static PNG */}
           <View

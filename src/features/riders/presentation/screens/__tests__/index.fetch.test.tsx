@@ -16,6 +16,7 @@ jest.mock("expo-router", () => {
 jest.mock("expo-image", () => ({ Image: () => null }));
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children: unknown }) => children,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
 }));
 jest.mock("@/hooks/useColors", () => ({ useColors: () => ({}) }));
 jest.mock("@/features/riders/presentation/styles/index.styles", () => ({

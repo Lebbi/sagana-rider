@@ -15,7 +15,10 @@ import {
     View,
 } from "react-native";
 
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
@@ -86,6 +89,7 @@ function buildVehicles(profile: RiderProfileData | null): RiderVehicle[] {
 export default function RiderProfile() {
   const colors = useColors();
   const styles = stylesFactory(colors);
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { logout } = useUser();
 
@@ -166,12 +170,12 @@ export default function RiderProfile() {
 
   return (
     <View style={styles.screen}>
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.headerSurface}>
+          <View style={[styles.headerSurface, { paddingTop: insets.top + 8 }]}>
             {/* Burger menu removed — settings list below covers everything */}
 
             <View style={styles.avatarWithBadge}>
