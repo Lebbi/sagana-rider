@@ -26,6 +26,8 @@ interface NativeMapViewProps {
   isDarkMode: boolean;
   onMapReady?: () => void;
   onPress?: () => void;
+  /** Additional pins, for previews with a stop besides the destination. */
+  extraStops?: { point: GeoPoint; type: "pickup" | "delivery" }[];
 }
 
 export default function NativeMapView({
@@ -38,6 +40,7 @@ export default function NativeMapView({
   isDarkMode,
   onMapReady,
   onPress,
+  extraStops,
 }: NativeMapViewProps) {
   const mapRef = useRef<any>(null);
   const colors = useColors();
@@ -58,6 +61,7 @@ export default function NativeMapView({
 
     const points: GeoPoint[] = [];
     if (destination) points.push(destination);
+    extraStops?.forEach((s) => points.push(s.point));
     if (riderLocation) points.push(riderLocation);
     if (route?.polyline?.length) points.push(...route.polyline);
 
@@ -73,7 +77,7 @@ export default function NativeMapView({
         animated: true,
       },
     );
-  }, [route, riderLocation, destination]);
+  }, [route, riderLocation, destination, extraStops]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -130,6 +134,29 @@ export default function NativeMapView({
             </View>
           </Marker>
         )}
+
+        {extraStops?.map((stop, index) => (
+          <Marker
+            key={`${stop.type}-${index}`}
+            coordinate={stop.point}
+            tracksViewChanges={false}
+          >
+            <View style={styles.markerContainer}>
+              <View
+                style={[
+                  styles.marker,
+                  stop.type === "pickup" ? styles.pickupMarker : styles.deliveryMarker,
+                ]}
+              >
+                <MaterialIcons
+                  name={stop.type === "pickup" ? "warehouse" : "home"}
+                  size={22}
+                  color="#FFFFFF"
+                />
+              </View>
+            </View>
+          </Marker>
+        ))}
 
         {/* Rider marker */}
         {riderLocation && (

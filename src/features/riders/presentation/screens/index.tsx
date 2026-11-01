@@ -24,6 +24,7 @@ import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 import { useRiderLocation, calculateDistance } from "@/features/riders/presentation/hooks/useRiderLocation";
+import OrderPreviewSheet from "@/features/riders/presentation/components/OrderPreviewSheet";
 import { getOrderCardRoute } from "@/features/riders/presentation/utils/orderNavigation";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
@@ -79,10 +80,12 @@ type OrderCard = ReturnType<typeof toOrderCard>;
 function DriverOrderCardView({
   order,
   onAccept,
+  onPreview,
   acceptInFlight,
 }: {
   order: OrderCard;
   onAccept: (orderId: number) => void;
+  onPreview: (orderId: number) => void;
   acceptInFlight: boolean;
 }) {
   const colors = useColors();
@@ -92,6 +95,10 @@ function DriverOrderCardView({
   const isAvailable = order.status === "searching";
 
   const handleCardPress = () => {
+    if (isAvailable) {
+      onPreview(order.orderId);
+      return;
+    }
     router.push(getOrderCardRoute(order) as never);
   };
 
@@ -215,6 +222,7 @@ export default function DriverHomepageScreen() {
   const [availableOrders, setAvailableOrders] = useState<RiderOrder[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [acceptingOrderId, setAcceptingOrderId] = useState<number | null>(null);
+  const [previewOrderId, setPreviewOrderId] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -314,6 +322,7 @@ export default function DriverHomepageScreen() {
       setAcceptingOrderId(orderId);
       try {
         await acceptOrder(orderId);
+        setPreviewOrderId(null);
         handleApiSuccess("Order Accepted", "The order is now yours to deliver.");
         await fetchOrders();
         // Navigate to Active Delivery immediately so the rider sees the
@@ -333,6 +342,7 @@ export default function DriverHomepageScreen() {
         } else {
           handleApiError(e, "Could not accept the order. Please try again.");
         }
+        setPreviewOrderId(null);
         await fetchOrders();
       } finally {
         setAcceptingOrderId(null);
@@ -390,6 +400,7 @@ export default function DriverHomepageScreen() {
   // live GPS (falling back to the service-area default until a fix arrives).
   const mapCenter: GeoPoint = mapDestination ?? riderLocation ?? DEFAULT_MAP_CENTER;
 
+  const previewOrder = availableOrders.find((o) => o.orderId === previewOrderId) ?? null;
   const activeCard = activeOrder ? toOrderCard(activeOrder, true, riderLocation ?? undefined) : null;
   const availableCards = availableOrders
     .map((o) => toOrderCard(o, false, riderLocation ?? undefined))
@@ -493,6 +504,7 @@ export default function DriverHomepageScreen() {
               <DriverOrderCardView
                 order={activeCard}
                 onAccept={handleAcceptOrder}
+                onPreview={setPreviewOrderId}
                 acceptInFlight={acceptingOrderId === activeCard.orderId}
               />
             ) : (
@@ -514,6 +526,7 @@ export default function DriverHomepageScreen() {
                   key={card.id}
                   order={card}
                   onAccept={handleAcceptOrder}
+                  onPreview={setPreviewOrderId}
                   acceptInFlight={acceptingOrderId === card.orderId}
                 />
               ))
@@ -527,6 +540,15 @@ export default function DriverHomepageScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      {previewOrder && (
+        <OrderPreviewSheet
+          order={previewOrder}
+          riderLocation={riderLocation ?? null}
+          accepting={acceptingOrderId === previewOrder.orderId}
+          onAccept={handleAcceptOrder}
+          onClose={() => setPreviewOrderId(null)}
+        />
+      )}
     </View>
   );
 }
