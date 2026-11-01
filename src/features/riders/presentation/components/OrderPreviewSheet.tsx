@@ -80,32 +80,45 @@ export default function OrderPreviewSheet({
 }) {
   const insets = useSafeAreaInsets();
   const isDarkMode = useColorScheme() === "dark";
-  const { pickup, delivery, request } = useMemo(
+  const { pickup, delivery, legs } = useMemo(
     () => getPreviewStops(order, riderLocation),
     [order, riderLocation],
   );
 
   // Round the key so GPS jitter does not refetch the route on every fix.
-  const routeKey = request
-    ? [request.origin, ...(request.waypoints ?? []), request.destination]
-        .map((p) => `${p.latitude.toFixed(3)},${p.longitude.toFixed(3)}`)
+  const routeKey = legs.length
+    ? legs
+        .map(({ request: r }) =>
+          [r.origin, r.destination]
+            .map((p) => `${p.latitude.toFixed(3)},${p.longitude.toFixed(3)}`)
+            .join(">"),
+        )
         .join("|")
     : null;
   const [route, setRoute] = useState<RouteResponse | null>(null);
+  const [legMeters, setLegMeters] = useState<number[]>([]);
   const [routeState, setRouteState] = useState<"loading" | "ready" | "unavailable">("loading");
 
   useEffect(() => {
-    if (!request) {
+    if (!legs.length) {
       setRoute(null);
+      setLegMeters([]);
       setRouteState("unavailable");
       return;
     }
     let cancelled = false;
     setRouteState("loading");
-    getDirections(request)
-      .then((r) => {
+    Promise.all(legs.map((l) => getDirections(l.request)))
+      .then((results) => {
         if (cancelled) return;
-        setRoute(r);
+        setLegMeters(results.map((r) => r.totalDistance));
+        setRoute({
+          polyline: results.flatMap((r) => r.polyline),
+          totalDistance: results.reduce((n, r) => n + r.totalDistance, 0),
+          totalDuration: results.reduce((n, r) => n + r.totalDuration, 0),
+          steps: results.flatMap((r) => r.steps),
+          legs: results.flatMap((r) => r.legs),
+        });
         setRouteState("ready");
       })
       .catch(() => {
@@ -116,14 +129,12 @@ export default function OrderPreviewSheet({
     return () => {
       cancelled = true;
     };
-    // routeKey stands in for request, which is rebuilt on every GPS fix.
+    // routeKey stands in for legs, which are rebuilt on every GPS fix.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeKey]);
 
-  const legs = route?.legs ?? [];
-  const hasRiderLeg = !!request?.waypoints?.length || (!!request && !delivery);
-  const toFarmer = hasRiderLeg ? legs[0]?.distance : undefined;
-  const toBuyer = hasRiderLeg ? legs[1]?.distance : legs[0]?.distance;
+  const toFarmer = legMeters[legs.findIndex((l) => l.to === "farmer")];
+  const toBuyer = legMeters[legs.findIndex((l) => l.to === "buyer")];
 
   const destination = delivery ?? pickup;
   const extraStops = pickup && delivery ? [{ point: pickup, type: "pickup" as const }] : undefined;
@@ -144,7 +155,7 @@ export default function OrderPreviewSheet({
           {routeState === "unavailable" && (
             <View style={[styles.mapNote, { top: insets.top + 64 }]}>
               <Text style={styles.mapNoteText}>
-                {request ? "Route unavailable. Pins show the stops." : "Map pin not set for this order."}
+                {legs.length ? "Route unavailable. Pins show the stops." : "Map pin not set for this order."}
               </Text>
             </View>
           )}

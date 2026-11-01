@@ -8,23 +8,25 @@ function usablePoint(addr: PreciseAddress): GeoPoint | null {
   return { latitude, longitude };
 }
 
+export type PreviewLeg = { to: "farmer" | "buyer"; request: RouteRequest };
+
 /**
- * Pins and the route request for the Available Orders preview. A stop with no
- * real map pin gets no pin and no route leg, so the rider is never sent to a
- * placeholder location.
+ * Pins and route legs for the Available Orders preview. The routing endpoint
+ * only routes origin to destination (it ignores waypoints), so each leg is its
+ * own request. A stop with no real map pin gets no pin and no leg, so the rider
+ * is never sent to a placeholder location.
  */
 export function getPreviewStops(order: RiderOrder, rider: GeoPoint | null) {
   const pickup = usablePoint(order.pickup.address);
   const delivery = usablePoint(order.delivery.address);
+  const leg = (to: PreviewLeg["to"], origin: GeoPoint, destination: GeoPoint): PreviewLeg => ({
+    to,
+    request: { origin, destination, mode: "driving" },
+  });
 
-  let request: RouteRequest | null = null;
-  if (pickup && delivery) {
-    request = rider
-      ? { origin: rider, waypoints: [pickup], destination: delivery, mode: "driving" }
-      : { origin: pickup, destination: delivery, mode: "driving" };
-  } else if (pickup && rider) {
-    request = { origin: rider, destination: pickup, mode: "driving" };
-  }
+  const legs: PreviewLeg[] = [];
+  if (pickup && rider) legs.push(leg("farmer", rider, pickup));
+  if (pickup && delivery) legs.push(leg("buyer", pickup, delivery));
 
-  return { pickup, delivery, request };
+  return { pickup, delivery, legs };
 }

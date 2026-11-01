@@ -11,38 +11,31 @@ const order = (pickup: unknown, delivery: unknown) =>
 const rider = { latitude: 15.03, longitude: 120.68 };
 
 describe("getPreviewStops", () => {
-  it("routes rider to farmer to buyer when all pins are real", () => {
-    const { request, pickup, delivery } = getPreviewStops(
+  it("routes rider to farmer, then farmer to buyer, as separate legs", () => {
+    const { legs, pickup, delivery } = getPreviewStops(
       order(addr(15.04, 120.69), addr(15.05, 120.7)),
       rider,
     );
-    expect(pickup).toEqual({ latitude: 15.04, longitude: 120.69 });
-    expect(delivery).toEqual({ latitude: 15.05, longitude: 120.7 });
-    expect(request?.origin).toEqual(rider);
-    expect(request?.waypoints).toEqual([pickup]);
-    expect(request?.destination).toEqual(delivery);
+    expect(legs.map((l) => l.to)).toEqual(["farmer", "buyer"]);
+    expect(legs[0].request).toMatchObject({ origin: rider, destination: pickup });
+    expect(legs[1].request).toMatchObject({ origin: pickup, destination: delivery });
   });
 
-  it("starts at the farmer when the rider location is unknown", () => {
-    const { request, pickup } = getPreviewStops(
-      order(addr(15.04, 120.69), addr(15.05, 120.7)),
-      null,
-    );
-    expect(request?.origin).toEqual(pickup);
-    expect(request?.waypoints).toBeUndefined();
+  it("has only the farmer to buyer leg when the rider location is unknown", () => {
+    const { legs } = getPreviewStops(order(addr(15.04, 120.69), addr(15.05, 120.7)), null);
+    expect(legs.map((l) => l.to)).toEqual(["buyer"]);
   });
 
   it("drops a stop whose map pin is not set and never routes to it", () => {
-    const { request, delivery } = getPreviewStops(
+    const { legs, delivery } = getPreviewStops(
       order(addr(15.04, 120.69), addr(15.0319, 120.6894, true)),
       rider,
     );
     expect(delivery).toBeNull();
-    expect(request?.destination).toEqual({ latitude: 15.04, longitude: 120.69 });
-    expect(request?.waypoints).toBeUndefined();
+    expect(legs.map((l) => l.to)).toEqual(["farmer"]);
   });
 
-  it("has no route when the farmer pin is missing", () => {
-    expect(getPreviewStops(order(addr(0, 0), addr(15.05, 120.7)), rider).request).toBeNull();
+  it("has no legs when the farmer pin is missing", () => {
+    expect(getPreviewStops(order(addr(0, 0), addr(15.05, 120.7)), rider).legs).toEqual([]);
   });
 });
