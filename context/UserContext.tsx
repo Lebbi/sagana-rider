@@ -25,6 +25,7 @@ import {
 
 import { useRouter } from "expo-router";
 
+import { unregisterPush } from "../lib/notifications";
 import { secureStorage } from "../utils/secureStorage";
 
 export type RiderInfo = {
@@ -213,6 +214,8 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = useCallback(async () => {
     try {
+      await unregisterPush();
+
       // Call backend logout to revoke tokens (best effort)
       const api = (await import("../lib/api")).default;
       await api.post("/logout").catch(() => {});

@@ -183,6 +183,7 @@ api.interceptors.request.use(async (config) => {
           ? (() => {
               const safe = { ...(config.data as any) };
               if (safe.password) safe.password = "***";
+              if (safe.token) safe.token = "***";
               return safe;
             })()
           : config.data,
