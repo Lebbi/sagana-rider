@@ -17,9 +17,15 @@ import {
     useColorScheme,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 // New map + navigation imports
+import {
+  MIN_STOP_GAP,
+  SHEET_DEFAULT_OFFSET,
+  SHEET_EXPANDED_OFFSET,
+  getSheetStops,
+} from "@/features/riders/presentation/utils/sheetStops";
 import ETABadge from "@/features/riders/presentation/components/ETABadge";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
@@ -43,8 +49,6 @@ const removePhotoStyle = {
   justifyContent: "center" as const,
 };
 
-const SHEET_COLLAPSED_OFFSET = 380;
-const SHEET_EXPANDED_OFFSET = 110;
 const DRAG_DISMISS_THRESHOLD = 64;
 const PEEK_HEIGHT_GUESS = 260;
 
@@ -275,8 +279,8 @@ export default function ActiveDeliveryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order]);
 
-  const translateY = useRef(new Animated.Value(SHEET_COLLAPSED_OFFSET)).current;
-  const dragStartYRef = useRef(SHEET_COLLAPSED_OFFSET);
+  const translateY = useRef(new Animated.Value(SHEET_DEFAULT_OFFSET)).current;
+  const dragStartYRef = useRef(SHEET_DEFAULT_OFFSET);
 
   const [isSheetLowered, setIsSheetLowered] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(0);
@@ -294,7 +298,11 @@ export default function ActiveDeliveryPage() {
   );
 
   // Lowest stop: the sheet top sits so only the handle + checklist/photo show.
-  const peekOffset = Math.max(SHEET_COLLAPSED_OFFSET, sheetHeight - peekHeight);
+  const insets = useSafeAreaInsets();
+  const peekOffset = Math.max(
+    SHEET_EXPANDED_OFFSET + MIN_STOP_GAP,
+    sheetHeight - peekHeight,
+  );
   const peekOffsetRef = useRef(peekOffset);
   peekOffsetRef.current = peekOffset;
 
@@ -305,7 +313,7 @@ export default function ActiveDeliveryPage() {
   const loadedOrderId = order?.orderId;
   useEffect(() => {
     setIsSheetLowered(false);
-    animateSheetTo(SHEET_COLLAPSED_OFFSET);
+    animateSheetTo(SHEET_DEFAULT_OFFSET);
   }, [loadedOrderId, animateSheetTo]);
 
   const handleMapPress = useCallback(() => {
@@ -427,12 +435,7 @@ export default function ActiveDeliveryPage() {
           );
         },
         onPanResponderRelease: (_, gesture) => {
-          // Snap stops, top to bottom: expanded, default, peek (below the photo button).
-          const stops = [
-            SHEET_EXPANDED_OFFSET,
-            SHEET_COLLAPSED_OFFSET,
-            peekOffsetRef.current,
-          ];
+          const stops = getSheetStops(peekOffsetRef.current);
           const current = dragStartYRef.current + gesture.dy;
           const nearest = stops.reduce((a, b) =>
             Math.abs(b - current) < Math.abs(a - current) ? b : a,
@@ -870,7 +873,7 @@ export default function ActiveDeliveryPage() {
           </View>
 
           {isSheetLowered ? (
-            <View style={[styles.sheetBody, { paddingBottom: 16 }]}>
+            <View style={[styles.sheetBody, { paddingBottom: 16 + insets.bottom }]}>
               {isPhaseOne ? (
                 <>
                   {itemsChecklist}
