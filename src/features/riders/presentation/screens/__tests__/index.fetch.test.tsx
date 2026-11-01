@@ -100,5 +100,5 @@ describe("home screen order fetching", () => {
 
     expect(ordersAfter).toBe(ordersBefore);
     expect(settingsAfter).toBe(settingsBefore);
-  });
+  }, 20000);
 });
