@@ -29,6 +29,10 @@ jest.mock("@/features/riders/presentation/components/NativeMapView", () => ({
   __esModule: true,
   default: () => null,
 }));
+jest.mock("@/features/riders/presentation/components/OrderPreviewSheet", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 jest.mock("@/lib/mapTiles", () => ({ DEFAULT_MAP_CENTER: { latitude: 0, longitude: 0 } }));
 jest.mock("@/utils/errorHandler", () => ({
   handleApiError: jest.fn(),
