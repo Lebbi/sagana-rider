@@ -10,7 +10,7 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Text, TextInput, type TextStyle } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -20,6 +20,7 @@ import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
 import { PushNotifications } from "@/components/PushNotifications";
 import { saganaToastConfig } from "@/components/ui/saganaToastConfig";
 import { UserProvider } from "@/context/UserContext";
+import { loadLanguage } from "@/lib/i18n";
 import { configureNotifications } from "@/lib/notifications";
 import Toast from "react-native-toast-message";
 
@@ -60,8 +61,11 @@ export default function RootLayout() {
     StackSansHeadline_700Bold,
   });
 
+  const [languageLoaded, setLanguageLoaded] = useState(false);
+
   useEffect(() => {
     configureNotifications();
+    loadLanguage().finally(() => setLanguageLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -70,7 +74,7 @@ export default function RootLayout() {
     applyDefaultTextInputStyle(defaultInputStyle);
   }, [loaded]);
 
-  if (!loaded) {
+  if (!loaded || !languageLoaded) {
     // Keep the splash screen on until fonts are ready (the expo-splash-screen
     // plugin holds the splash while the first render is empty).
     return null;

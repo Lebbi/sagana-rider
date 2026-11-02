@@ -268,6 +268,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       alignItems: "center",
     },
     settingLabel: {
+      flexShrink: 1,
       fontSize: 11,
       color: colors.textDark,
       fontFamily: fontFamily.regular,

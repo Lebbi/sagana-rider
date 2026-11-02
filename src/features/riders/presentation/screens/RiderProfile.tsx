@@ -23,11 +23,12 @@ import {
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import { useUser } from "@/context/UserContext";
+import { LANGUAGES, getLanguage, setLanguage, t, useT, type TextKey } from "@/lib/i18n";
 import { getRiderProfile, updateRiderProfile, type RiderProfileData, type VehicleType } from "@/lib/riderProfileApi";
 
 interface SelectionOption {
   id: string;
-  label: string;
+  label: TextKey;
 }
 
 interface RiderVehicle {
@@ -40,18 +41,20 @@ interface RiderVehicle {
 const PROFILE_IMAGE = require("@/assets/images/default-avatar.png");
 const SAGANA_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
 
-const LANGUAGE_OPTIONS: SelectionOption[] = [
-  { id: "english-us", label: "English (US)" },
-  { id: "tagalog", label: "Tagalog" },
-  { id: "kapampangan", label: "Kapampangan" },
+const TEXT_SIZE_OPTIONS: SelectionOption[] = [
+  { id: "small", label: "textSize.small" },
+  { id: "medium", label: "textSize.medium" },
+  { id: "large", label: "textSize.large" },
+  { id: "extra-large", label: "textSize.extraLarge" },
 ];
 
-const TEXT_SIZE_OPTIONS: SelectionOption[] = [
-  { id: "small", label: "Small" },
-  { id: "medium", label: "Medium" },
-  { id: "large", label: "Large" },
-  { id: "extra-large", label: "Xtra Large" },
-];
+const VEHICLE_LABELS: Record<VehicleType, TextKey> = {
+  motorcycle: "vehicle.motorcycle",
+  scooter: "vehicle.scooter",
+  car: "vehicle.car",
+  bicycle: "vehicle.bicycle",
+  tricycle: "vehicle.tricycle",
+};
 
 // Build the garage list from the rider's real profile data (single vehicle
 // per rider in v1) — falls back to a neutral placeholder while loading.
@@ -60,18 +63,19 @@ function buildVehicles(profile: RiderProfileData | null): RiderVehicle[] {
     return [
       {
         id: "vehicle-none",
-        title: "No vehicle on file",
-        subtitle: "Contact Sagana support",
+        title: t("profile.noVehicle"),
+        subtitle: t("profile.contactSupport"),
         icon: "two-wheeler" as keyof typeof MaterialIcons.glyphMap,
       },
     ];
   }
-  const label =
-    profile.vehicle_type.charAt(0).toUpperCase() +
-    profile.vehicle_type.slice(1);
+  const typeKey = VEHICLE_LABELS[profile.vehicle_type.toLowerCase() as VehicleType];
+  const label = typeKey
+    ? t(typeKey)
+    : profile.vehicle_type.charAt(0).toUpperCase() + profile.vehicle_type.slice(1);
   const plate = profile.vehicle_plate_number
-    ? `Plate: ${profile.vehicle_plate_number}`
-    : "Plate not registered";
+    ? t("profile.plate", { plate: profile.vehicle_plate_number })
+    : t("profile.plateMissing");
   const icon =
     profile.vehicle_type.toLowerCase() === "car"
       ? ("directions-car" as keyof typeof MaterialIcons.glyphMap)
@@ -92,11 +96,12 @@ export default function RiderProfile() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { logout } = useUser();
+  const t = useT();
+  const language = getLanguage();
 
   const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
   const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState("English (US)");
-  const [selectedTextSize, setSelectedTextSize] = useState("Medium");
+  const [selectedTextSize, setSelectedTextSize] = useState<TextKey>("textSize.medium");
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
   const [isTextSizeModalVisible, setIsTextSizeModalVisible] = useState(false);
   const [profileData, setProfileData] = useState<RiderProfileData | null>(null);
@@ -124,7 +129,7 @@ export default function RiderProfile() {
     };
   }, []);
 
-  const vehicles = useMemo(() => buildVehicles(profileData), [profileData]);
+  const vehicles = useMemo(() => buildVehicles(profileData), [profileData, language]);
 
   const handleOpenGarage = () => {
     setGarageVehicleType((profileData?.vehicle_type as VehicleType) ?? "motorcycle");
@@ -144,7 +149,7 @@ export default function RiderProfile() {
       setProfileData(updated);
       setIsGarageModalVisible(false);
     } catch (e: any) {
-      Alert.alert("Error", "Failed to save vehicle info. Please try again.");
+      Alert.alert(t("common.error"), t("profile.saveVehicleFailed"));
     } finally {
       setIsGarageSaving(false);
     }
@@ -156,10 +161,10 @@ export default function RiderProfile() {
   );
 
   const handleLogout = () => {
-    Alert.alert("Log out?", "You will need to log in again to continue.", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("profile.logoutTitle"), t("profile.logoutBody"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Log out",
+        text: t("profile.logout"),
         style: "destructive",
         onPress: () => {
           void logout();
@@ -197,7 +202,7 @@ export default function RiderProfile() {
               </View>
             </View>
             <Text style={styles.userName}>
-              {profileData?.name ?? "Loading..."}
+              {profileData?.name ?? t("common.loading")}
             </Text>
           </View>
 
@@ -206,19 +211,19 @@ export default function RiderProfile() {
               <Text style={styles.statValue}>
                 {profileData ? `${profileData.rating.toFixed(1)}` : "—"}
               </Text>
-              <Text style={styles.statLabel}>Rating</Text>
+              <Text style={styles.statLabel}>{t("profile.rating")}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>
                 {profileData?.total_deliveries ?? "—"}
               </Text>
-              <Text style={styles.statLabel}>Deliveries</Text>
+              <Text style={styles.statLabel}>{t("profile.deliveries")}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>
                 {profileData ? `${profileData.on_time_rate}%` : "—"}
               </Text>
-              <Text style={styles.statLabel}>On-Time</Text>
+              <Text style={styles.statLabel}>{t("profile.onTime")}</Text>
             </View>
           </View>
 
@@ -229,7 +234,7 @@ export default function RiderProfile() {
             accessibilityLabel="Open sagana card"
           >
             <View style={styles.promoBadge}>
-              <Text style={styles.promoBadgeText}>Coming Soon</Text>
+              <Text style={styles.promoBadgeText}>{t("common.comingSoon")}</Text>
             </View>
             <Image
               source={SAGANA_LOGO}
@@ -237,14 +242,13 @@ export default function RiderProfile() {
               contentFit="contain"
             />
             <Text style={styles.promoSubtitle}>
-              Unlock advanced analytics, farm-direct bidding, and premium
-              harvest reports
+              {t("profile.promo")}
             </Text>
           </TouchableOpacity>
 
           <View style={styles.garageWrap}>
             <View style={styles.garageHeaderRow}>
-              <Text style={styles.garageTitle}>Garage</Text>
+              <Text style={styles.garageTitle}>{t("profile.garage")}</Text>
               <Pressable
                 onPress={handleOpenGarage}
                 accessibilityRole="button"
@@ -315,7 +319,7 @@ export default function RiderProfile() {
                   size={11}
                   color={colors.success}
                 />
-                <Text style={styles.garageTagText}>License</Text>
+                <Text style={styles.garageTagText}>{t("profile.license")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.garageTag} onPress={() => null}>
                 <MaterialIcons
@@ -323,7 +327,7 @@ export default function RiderProfile() {
                   size={11}
                   color={colors.success}
                 />
-                <Text style={styles.garageTagText}>Registration</Text>
+                <Text style={styles.garageTagText}>{t("profile.registration")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -343,7 +347,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Edit Profile</Text>
+                <Text style={styles.settingLabel}>{t("profile.editProfile")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -365,7 +369,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Password & Security</Text>
+                <Text style={styles.settingLabel}>{t("profile.passwordSecurity")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -390,7 +394,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Vouchers</Text>
+                <Text style={styles.settingLabel}>{t("profile.vouchers")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -412,7 +416,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Refer a Rider</Text>
+                <Text style={styles.settingLabel}>{t("profile.referRider")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -434,7 +438,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Terms and Conditions</Text>
+                <Text style={styles.settingLabel}>{t("profile.terms")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -459,7 +463,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Notifications</Text>
+                <Text style={styles.settingLabel}>{t("profile.notifications")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -481,10 +485,12 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Language</Text>
+                <Text style={styles.settingLabel}>{t("profile.language")}</Text>
               </View>
               <View style={styles.settingRight}>
-                <Text style={styles.settingValue}>{selectedLanguage}</Text>
+                <Text style={styles.settingValue}>
+                  {LANGUAGES.find((option) => option.id === language)?.label}
+                </Text>
                 <MaterialIcons
                   name={IconTheme.chevronRight}
                   size={14}
@@ -501,7 +507,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Dark Mode</Text>
+                <Text style={styles.settingLabel}>{t("profile.darkMode")}</Text>
               </View>
               <Switch
                 value={isDarkModeEnabled}
@@ -527,7 +533,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Text Size</Text>
+                <Text style={styles.settingLabel}>{t("profile.textSize")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -552,7 +558,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Report a problem</Text>
+                <Text style={styles.settingLabel}>{t("profile.reportProblem")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -574,7 +580,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Help</Text>
+                <Text style={styles.settingLabel}>{t("profile.help")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -596,7 +602,7 @@ export default function RiderProfile() {
                     color={colors.success}
                   />
                 </View>
-                <Text style={styles.settingLabel}>Legal & policies</Text>
+                <Text style={styles.settingLabel}>{t("profile.legal")}</Text>
               </View>
               <MaterialIcons
                 name={IconTheme.chevronRight}
@@ -621,7 +627,7 @@ export default function RiderProfile() {
                     color={colors.error}
                   />
                 </View>
-                <Text style={styles.logoutLabel}>Log out</Text>
+                <Text style={styles.logoutLabel}>{t("profile.logout")}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -639,11 +645,11 @@ export default function RiderProfile() {
           onPress={() => setIsLanguageModalVisible(false)}
         >
           <Pressable style={styles.modalSheet} onPress={() => null}>
-            <Text style={styles.modalTitle}>Choose Language</Text>
+            <Text style={styles.modalTitle}>{t("profile.chooseLanguage")}</Text>
             <View style={styles.modalOptionsList}>
-              {LANGUAGE_OPTIONS.map((option, index) => {
-                const isSelected = selectedLanguage === option.label;
-                const isLastItem = index === LANGUAGE_OPTIONS.length - 1;
+              {LANGUAGES.map((option, index) => {
+                const isSelected = language === option.id;
+                const isLastItem = index === LANGUAGES.length - 1;
                 return (
                   <TouchableOpacity
                     key={option.id}
@@ -652,11 +658,11 @@ export default function RiderProfile() {
                       isLastItem ? styles.modalOptionRowLast : null,
                     ]}
                     onPress={() => {
-                      setSelectedLanguage(option.label);
+                      setLanguage(option.id);
                       setIsLanguageModalVisible(false);
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${option.label}`}
+                    accessibilityLabel={option.label}
                   >
                     <Text
                       style={[
@@ -692,7 +698,7 @@ export default function RiderProfile() {
           onPress={() => setIsTextSizeModalVisible(false)}
         >
           <Pressable style={styles.modalSheet} onPress={() => null}>
-            <Text style={styles.modalTitle}>Choose Text Size</Text>
+            <Text style={styles.modalTitle}>{t("profile.chooseTextSize")}</Text>
             <View style={styles.modalOptionsList}>
               {TEXT_SIZE_OPTIONS.map((option, index) => {
                 const isSelected = selectedTextSize === option.label;
@@ -709,7 +715,7 @@ export default function RiderProfile() {
                       setIsTextSizeModalVisible(false);
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${option.label}`}
+                    accessibilityLabel={t(option.label)}
                   >
                     <Text
                       style={[
@@ -717,7 +723,7 @@ export default function RiderProfile() {
                         isSelected ? styles.modalOptionTextSelected : null,
                       ]}
                     >
-                      {option.label}
+                      {t(option.label)}
                     </Text>
                     {isSelected ? (
                       <MaterialIcons
@@ -746,18 +752,13 @@ export default function RiderProfile() {
           onPress={() => setIsGarageModalVisible(false)}
         >
           <Pressable style={styles.modalSheet} onPress={() => null}>
-            <Text style={styles.modalTitle}>Edit Vehicle</Text>
+            <Text style={styles.modalTitle}>{t("profile.editVehicle")}</Text>
 
             {/* Vehicle type chips */}
-            <Text style={styles.garageModalLabel}>Vehicle Type</Text>
+            <Text style={styles.garageModalLabel}>{t("profile.vehicleType")}</Text>
             <View style={styles.garageModalChipsRow}>
-              {[
-                { value: "motorcycle", label: "Motorcycle" },
-                { value: "scooter", label: "Scooter" },
-                { value: "car", label: "Car" },
-                { value: "bicycle", label: "Bicycle" },
-                { value: "tricycle", label: "Tricycle" },
-              ].map((opt) => {
+              {(Object.keys(VEHICLE_LABELS) as VehicleType[]).map((value) => {
+                const opt = { value, label: t(VEHICLE_LABELS[value]) };
                 const isSelected = garageVehicleType === opt.value;
                 return (
                   <Pressable
@@ -768,7 +769,7 @@ export default function RiderProfile() {
                     ]}
                     onPress={() => setGarageVehicleType(opt.value as VehicleType)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${opt.label}`}
+                    accessibilityLabel={opt.label}
                   >
                     <Text
                       style={[
@@ -784,7 +785,7 @@ export default function RiderProfile() {
             </View>
 
             {/* Plate number */}
-            <Text style={styles.garageModalLabel}>Plate Number</Text>
+            <Text style={styles.garageModalLabel}>{t("profile.plateNumber")}</Text>
             <TextInput
               style={styles.garageModalInput}
               value={garagePlate}
@@ -795,7 +796,7 @@ export default function RiderProfile() {
             />
 
             {/* License number */}
-            <Text style={styles.garageModalLabel}>License Number</Text>
+            <Text style={styles.garageModalLabel}>{t("profile.licenseNumber")}</Text>
             <TextInput
               style={styles.garageModalInput}
               value={garageLicense}
@@ -816,7 +817,7 @@ export default function RiderProfile() {
               {isGarageSaving ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={styles.garageModalSaveText}>Save Vehicle</Text>
+                <Text style={styles.garageModalSaveText}>{t("profile.saveVehicle")}</Text>
               )}
             </Pressable>
           </Pressable>
