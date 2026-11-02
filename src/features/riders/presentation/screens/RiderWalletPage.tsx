@@ -15,30 +15,23 @@ import {
 } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
+import { useT, type TextKey } from "@/lib/i18n";
 import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 
 // Keep this true to PAY-07: the backend has no rider withdrawal yet.
-const WALLET_INFO = [
-  {
-    heading: "Earnings",
-    body: "You get the delivery fee for each order you deliver. It's added to your balance when the order is marked delivered.",
-  },
-  {
-    heading: "Your balance",
-    body: "Available Balance adds up your delivery earnings. Total earnings is everything you've earned since you started.",
-  },
-  {
-    heading: "Withdrawals",
-    body: "You can't withdraw from the app yet, so this balance can't be cashed out here for now.",
-  },
+const WALLET_INFO: { heading: TextKey; body: TextKey }[] = [
+  { heading: "wallet.earningsHeading", body: "wallet.earningsBody" },
+  { heading: "wallet.balanceHeading", body: "wallet.balanceBody" },
+  { heading: "wallet.withdrawHeading", body: "wallet.withdrawBody" },
 ];
 
 export default function RiderWalletPage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const insets = useSafeAreaInsets();
+  const t = useT();
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
@@ -79,13 +72,13 @@ export default function RiderWalletPage() {
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <Text style={styles.headerTitle}>Wallet</Text>
+          <Text style={styles.headerTitle}>{t("wallet.title")}</Text>
           <Pressable
             style={styles.headerInfoButton}
             onPress={() => setIsInfoVisible(true)}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="How your wallet works"
+            accessibilityLabel={t("wallet.infoTitle")}
           >
             <MaterialIcons
               name={IconTheme.infoCircleOutlined}
@@ -130,23 +123,22 @@ export default function RiderWalletPage() {
               </View>
             )}
             <Text style={styles.chartCaption}>
-              Earning Activity (Last 7 Days)
+              {t("wallet.activity")}
             </Text>
           </View>
 
           <View style={styles.balanceCard}>
-            <Text style={styles.balanceLabel}>Available Balance</Text>
+            <Text style={styles.balanceLabel}>{t("wallet.available")}</Text>
             <Text style={styles.balanceAmount}>
               {isLoading ? "—" : formatPeso(wallet?.available_balance ?? 0)}
             </Text>
             <Text style={styles.balanceSubLabel}>
-              Total earnings:{" "}
-              {isLoading ? "—" : formatPeso(wallet?.total_earnings ?? 0)}
+              {t("wallet.total", { amount: isLoading ? "—" : formatPeso(wallet?.total_earnings ?? 0) })}
             </Text>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Recent Earnings</Text>
+            <Text style={styles.cardTitle}>{t("wallet.recent")}</Text>
             {isLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (wallet?.recent_earnings ?? []).length > 0 ? (
@@ -156,7 +148,7 @@ export default function RiderWalletPage() {
                 </Text>
               ))
             ) : (
-              <Text style={styles.cardText}>No earnings yet</Text>
+              <Text style={styles.cardText}>{t("wallet.noEarnings")}</Text>
             )}
           </View>
         </ScrollView>
@@ -173,12 +165,12 @@ export default function RiderWalletPage() {
           onPress={() => setIsInfoVisible(false)}
         >
           <Pressable style={styles.modalSheet} onPress={() => null}>
-            <Text style={styles.modalTitle}>How your wallet works</Text>
+            <Text style={styles.modalTitle}>{t("wallet.infoTitle")}</Text>
             <ScrollView showsVerticalScrollIndicator={false}>
               {WALLET_INFO.map(({ heading, body }) => (
                 <View key={heading} style={styles.modalSection}>
-                  <Text style={styles.modalHeading}>{heading}</Text>
-                  <Text style={styles.modalBody}>{body}</Text>
+                  <Text style={styles.modalHeading}>{t(heading)}</Text>
+                  <Text style={styles.modalBody}>{t(body)}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -187,7 +179,7 @@ export default function RiderWalletPage() {
               onPress={() => setIsInfoVisible(false)}
               accessibilityRole="button"
             >
-              <Text style={styles.modalCloseText}>Close</Text>
+              <Text style={styles.modalCloseText}>{t("common.close")}</Text>
             </Pressable>
           </Pressable>
         </Pressable>

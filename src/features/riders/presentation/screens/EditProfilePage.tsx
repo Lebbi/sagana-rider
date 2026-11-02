@@ -26,6 +26,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { fontFamily, fontWeight } from "@/constants/FontTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT, type TextKey } from "@/lib/i18n";
 import {
   getRiderProfile,
   updateRiderProfile,
@@ -36,18 +37,19 @@ import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 
 const PROFILE_IMAGE = require("@/assets/images/default-avatar.png");
 
-const VEHICLE_OPTIONS: { value: VehicleType; label: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { value: "motorcycle", label: "Motorcycle", icon: "two-wheeler" },
-  { value: "scooter", label: "Scooter", icon: "two-wheeler" },
-  { value: "car", label: "Car", icon: "directions-car" },
-  { value: "bicycle", label: "Bicycle", icon: "pedal-bike" },
-  { value: "tricycle", label: "Tricycle", icon: "two-wheeler" },
+const VEHICLE_OPTIONS: { value: VehicleType; label: TextKey; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { value: "motorcycle", label: "vehicle.motorcycle", icon: "two-wheeler" },
+  { value: "scooter", label: "vehicle.scooter", icon: "two-wheeler" },
+  { value: "car", label: "vehicle.car", icon: "directions-car" },
+  { value: "bicycle", label: "vehicle.bicycle", icon: "pedal-bike" },
+  { value: "tricycle", label: "vehicle.tricycle", icon: "two-wheeler" },
 ];
 
 export default function EditProfilePage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const router = useRouter();
+  const t = useT();
 
   const [profile, setProfile] = useState<RiderProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +88,7 @@ export default function EditProfilePage() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert("Required", "Name cannot be empty.");
+      Alert.alert(t("editProfile.required"), t("editProfile.nameEmpty"));
       return;
     }
     setIsSaving(true);
@@ -98,10 +100,10 @@ export default function EditProfilePage() {
         vehicle_plate_number: plateNumber.trim() || null,
         license_number: licenseNumber.trim() || null,
       });
-      handleApiSuccess("Profile Updated", "Your changes have been saved.");
+      handleApiSuccess(t("editProfile.updated"), t("editProfile.saved"));
       router.back();
     } catch (e: any) {
-      handleApiError(e, "Failed to save profile. Please try again.");
+      handleApiError(e, t("editProfile.saveFailed"));
     } finally {
       setIsSaving(false);
     }
@@ -115,11 +117,11 @@ export default function EditProfilePage() {
             <Pressable
               style={styles.backButton}
               onPress={() => router.back()}
-              accessibilityLabel="Go back"
+              accessibilityLabel={t("editProfile.goBack")}
             >
               <MaterialIcons name={IconTheme.arrowBack} size={22} color={colors.textDark} />
             </Pressable>
-            <Text style={styles.headerTitle}>Edit Profile</Text>
+            <Text style={styles.headerTitle}>{t("profile.editProfile")}</Text>
             <View style={styles.backButton} />
           </View>
           <View style={styles.loadingWrap}>
@@ -138,11 +140,11 @@ export default function EditProfilePage() {
           <Pressable
             style={styles.backButton}
             onPress={() => router.back()}
-            accessibilityLabel="Go back"
+            accessibilityLabel={t("editProfile.goBack")}
           >
             <MaterialIcons name={IconTheme.arrowBack} size={22} color={colors.textDark} />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>{t("profile.editProfile")}</Text>
           <View style={styles.backButton} />
         </View>
 
@@ -161,27 +163,27 @@ export default function EditProfilePage() {
               style={styles.avatar}
             />
             <Text style={styles.avatarHint}>
-              Photo upload coming soon
+              {t("editProfile.photoSoon")}
             </Text>
           </View>
 
           {/* Personal Info */}
-          <Text style={styles.sectionTitle}>Personal Information</Text>
+          <Text style={styles.sectionTitle}>{t("editProfile.personal")}</Text>
           <View style={styles.fieldGroup}>
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Name</Text>
+              <Text style={styles.fieldLabel}>{t("editProfile.name")}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={name}
                 onChangeText={setName}
-                placeholder="Your name"
+                placeholder={t("editProfile.namePlaceholder")}
                 placeholderTextColor={colors.textMuted}
                 autoCapitalize="words"
               />
             </View>
             <View style={styles.fieldDivider} />
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Phone</Text>
+              <Text style={styles.fieldLabel}>{t("editProfile.phone")}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={phoneNumber}
@@ -194,10 +196,10 @@ export default function EditProfilePage() {
           </View>
 
           {/* Vehicle Info */}
-          <Text style={styles.sectionTitle}>Vehicle Information</Text>
+          <Text style={styles.sectionTitle}>{t("editProfile.vehicle")}</Text>
           <View style={styles.fieldGroup}>
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Type</Text>
+              <Text style={styles.fieldLabel}>{t("editProfile.type")}</Text>
             </View>
             <View style={styles.vehicleOptionsRow}>
               {VEHICLE_OPTIONS.map((opt) => {
@@ -211,7 +213,7 @@ export default function EditProfilePage() {
                     ]}
                     onPress={() => setVehicleType(opt.value)}
                     accessibilityRole="button"
-                    accessibilityLabel={`Select ${opt.label}`}
+                    accessibilityLabel={t("editProfile.select", { vehicle: t(opt.label) })}
                   >
                     <MaterialIcons
                       name={opt.icon}
@@ -223,8 +225,10 @@ export default function EditProfilePage() {
                         styles.vehicleChipText,
                         isSelected ? styles.vehicleChipTextActive : null,
                       ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
                     >
-                      {opt.label}
+                      {t(opt.label)}
                     </Text>
                   </Pressable>
                 );
@@ -232,7 +236,7 @@ export default function EditProfilePage() {
             </View>
             <View style={styles.fieldDivider} />
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>Plate No.</Text>
+              <Text style={styles.fieldLabel}>{t("editProfile.plate")}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={plateNumber}
@@ -244,7 +248,7 @@ export default function EditProfilePage() {
             </View>
             <View style={styles.fieldDivider} />
             <View style={styles.fieldRow}>
-              <Text style={styles.fieldLabel}>License No.</Text>
+              <Text style={styles.fieldLabel}>{t("editProfile.license")}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={licenseNumber}
@@ -262,12 +266,12 @@ export default function EditProfilePage() {
             onPress={handleSave}
             disabled={isSaving}
             accessibilityRole="button"
-            accessibilityLabel="Save profile changes"
+            accessibilityLabel={t("editProfile.saveA11y")}
           >
             {isSaving ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>{t("editProfile.save")}</Text>
             )}
           </Pressable>
         </ScrollView>

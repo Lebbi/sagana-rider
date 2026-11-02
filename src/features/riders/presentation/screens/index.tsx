@@ -21,6 +21,7 @@ import { useAutoAccept } from "@/context/AutoAcceptContext";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { useColors } from "@/hooks/useColors";
+import { t, useT } from "@/lib/i18n";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
 import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
@@ -43,8 +44,8 @@ function formatAddressShort(addr: {
   const text =
     [addr.street, addr.barangay, addr.city, addr.province]
       .filter(Boolean)
-      .join(", ") || "Address pending";
-  return addr.coordinatesMissing ? `${text} (map pin not set)` : text;
+      .join(", ") || t("common.addressPending");
+  return addr.coordinatesMissing ? t("home.pinNotSet", { address: text }) : text;
 }
 
 /** Formats a RiderOrder into the display shape used by the card component. */
@@ -95,6 +96,7 @@ function DriverOrderCardView({
   const colors = useColors();
   const styles = stylesFactory(colors);
   const router = useRouter();
+  const t = useT();
   const isActive = order.isActive;
   const isAvailable = order.status === "searching";
 
@@ -113,7 +115,7 @@ function DriverOrderCardView({
       </View>
 
       <Text style={styles.recipientText}>{order.recipientLabel}</Text>
-      <Text style={styles.routeSubText}>Order {order.orderNumber}</Text>
+      <Text style={styles.routeSubText}>{t("common.orderNumber", { number: order.orderNumber })}</Text>
 
       <View style={styles.routeRow}>
         <View style={[styles.routeDot, styles.pickupDot]} />
@@ -124,8 +126,8 @@ function DriverOrderCardView({
             {order.pickupDistance !== null && order.pickupDistance !== undefined && (
               <Text style={styles.distanceText}>
                 {order.pickupDistance < 1000
-                  ? `${Math.round(order.pickupDistance)} m away`
-                  : `${(order.pickupDistance / 1000).toFixed(1)} km away`}
+                  ? t("home.metersAway", { distance: Math.round(order.pickupDistance) })
+                  : t("home.kmAway", { distance: (order.pickupDistance / 1000).toFixed(1) })}
               </Text>
             )}
           </View>
@@ -141,8 +143,8 @@ function DriverOrderCardView({
             {order.dropoffDistance !== null && order.dropoffDistance !== undefined && (
               <Text style={styles.distanceText}>
                 {order.dropoffDistance < 1000
-                  ? `${Math.round(order.dropoffDistance)} m away`
-                  : `${(order.dropoffDistance / 1000).toFixed(1)} km away`}
+                  ? t("home.metersAway", { distance: Math.round(order.dropoffDistance) })
+                  : t("home.kmAway", { distance: (order.dropoffDistance / 1000).toFixed(1) })}
               </Text>
             )}
           </View>
@@ -159,12 +161,12 @@ function DriverOrderCardView({
             }}
             disabled={acceptInFlight}
             accessibilityRole="button"
-            accessibilityLabel={`Accept order ${order.orderNumber}`}
+            accessibilityLabel={t("home.acceptOrderA11y", { number: order.orderNumber })}
           >
             {acceptInFlight ? (
               <ActivityIndicator size="small" color={colors.white} />
             ) : (
-              <Text style={styles.ctaTextActive}>ACCEPT ORDER</Text>
+              <Text style={styles.ctaTextActive} numberOfLines={1} adjustsFontSizeToFit>{t("orderDetails.acceptCta")}</Text>
             )}
           </Pressable>
         </View>
@@ -181,8 +183,10 @@ function DriverOrderCardView({
                 styles.ctaText,
                 isActive ? styles.ctaTextActive : styles.ctaTextInactive,
               ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
             >
-              {isActive ? "ORDER IS ACTIVE" : "YOU HAVE AN ACTIVE ORDER"}
+              {isActive ? t("home.orderActive") : t("home.youHaveActive")}
             </Text>
           </View>
           <View
@@ -210,6 +214,7 @@ export default function DriverHomepageScreen() {
   const styles = stylesFactory(colors);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   // Auto-accept + duty state now lives in AutoAcceptProvider so the
   // engine (mounted at tabs layout) reads the same values the rider
   // toggles here.
@@ -329,7 +334,7 @@ export default function DriverHomepageScreen() {
       try {
         await acceptOrder(orderId);
         setPreviewOrderId(null);
-        handleApiSuccess("Order Accepted", "The order is now yours to deliver.");
+        handleApiSuccess(t("status.accepted"), t("orderDetails.acceptedBody"));
         await fetchOrders();
         // Navigate to Active Delivery immediately so the rider sees the
         // order details instead of having to tap the Active card manually.
@@ -343,10 +348,10 @@ export default function DriverHomepageScreen() {
         if (status === 422) {
           handleApiError(
             e,
-            msg ?? "This order was just taken by another rider.",
+            msg ?? t("orderDetails.taken"),
           );
         } else {
-          handleApiError(e, "Could not accept the order. Please try again.");
+          handleApiError(e, t("orderDetails.acceptFailed"));
         }
         setPreviewOrderId(null);
         await fetchOrders();
@@ -440,7 +445,7 @@ export default function DriverHomepageScreen() {
               contentFit="contain"
             />
             <View style={styles.dutyRow}>
-              <Text style={styles.dutyLabel}>ON DUTY</Text>
+              <Text style={styles.dutyLabel}>{t("home.onDuty")}</Text>
               <Switch
                 value={isOnDuty}
                 onValueChange={handleToggleDuty}
@@ -461,14 +466,14 @@ export default function DriverHomepageScreen() {
                 size={20}
                 color={colors.primary}
               />
-              <View>
-                <Text style={styles.autoAcceptTitle}>Auto-Accept Orders</Text>
+              <View style={{ flexShrink: 1 }}>
+                <Text style={styles.autoAcceptTitle}>{t("home.autoAcceptTitle")}</Text>
                 <Text style={styles.autoAcceptDesc}>
                   {autoAcceptPhase === "countdown"
-                    ? "Accepting an order…"
+                    ? t("home.autoAccepting")
                     : autoAcceptPhase === "scanning" && autoAcceptEnabled && isOnDuty
-                      ? "Auto-accept active — scanning for orders"
-                      : "Automatically accept incoming delivery orders"}
+                      ? t("home.autoScanning")
+                      : t("home.autoAcceptDesc")}
                 </Text>
               </View>
             </View>
@@ -501,7 +506,7 @@ export default function DriverHomepageScreen() {
           </View>
 
           <View style={styles.sheet}>
-            <Text style={styles.sectionTitle}>Active Delivery</Text>
+            <Text style={styles.sectionTitle}>{t("home.activeDelivery")}</Text>
             {isLoadingOrders ? (
               <View style={styles.orderCard}>
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -516,12 +521,12 @@ export default function DriverHomepageScreen() {
             ) : (
               <View style={styles.orderCard}>
                 <Text style={styles.routeSubText}>
-                  No active delivery right now.
+                  {t("home.noActive")}
                 </Text>
               </View>
             )}
 
-            <Text style={styles.sectionTitleSecondary}>Available Orders</Text>
+            <Text style={styles.sectionTitleSecondary}>{t("home.availableOrders")}</Text>
             {isLoadingOrders ? (
               <View style={styles.orderCard}>
                 <ActivityIndicator size="small" color={colors.primary} />
@@ -539,7 +544,7 @@ export default function DriverHomepageScreen() {
             ) : (
               <View style={styles.orderCard}>
                 <Text style={styles.routeSubText}>
-                  No available orders right now.
+                  {t("home.noAvailable")}
                 </Text>
               </View>
             )}
