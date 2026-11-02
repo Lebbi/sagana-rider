@@ -92,7 +92,7 @@ export default function RiderWalletPage() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.sectionHeading}>This Week Earnings</Text>
+          <Text style={styles.sectionHeading}>{t("wallet.thisWeek")}</Text>
           <View style={styles.earningsCard}>
             {isLoading ? (
               <ActivityIndicator size="small" color={colors.primary} />

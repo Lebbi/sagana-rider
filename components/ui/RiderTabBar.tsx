@@ -11,6 +11,7 @@
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { fontFamily } from "@/constants/FontTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT, type TextKey } from "@/lib/i18n";
 import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -21,17 +22,17 @@ const fontFamilyMedium = fontFamily.medium;
 
 interface TabItem {
   key: string;
-  label: string;
+  label: TextKey;
   icon: keyof typeof IconTheme;
   route: string;
 }
 
 const RIDER_TABS: TabItem[] = [
-  { key: "home", label: "Home", icon: "home", route: "index" },
-  { key: "active", label: "Active", icon: "sync", route: "ActiveDeliveryPage" },
-  { key: "orders", label: "Orders", icon: "orders", route: "RiderOrdersPage" },
-  { key: "wallet", label: "Wallet", icon: "wallet", route: "RiderWalletPage" },
-  { key: "profile", label: "Profile", icon: "profile", route: "RiderProfile" },
+  { key: "home", label: "tabs.home", icon: "home", route: "index" },
+  { key: "active", label: "tabs.active", icon: "sync", route: "ActiveDeliveryPage" },
+  { key: "orders", label: "tabs.orders", icon: "orders", route: "RiderOrdersPage" },
+  { key: "wallet", label: "tabs.wallet", icon: "wallet", route: "RiderWalletPage" },
+  { key: "profile", label: "tabs.profile", icon: "profile", route: "RiderProfile" },
 ];
 
 // Screens where the tab bar is hidden (focused delivery modes)
@@ -58,6 +59,7 @@ export default function RiderTabBar(props: RiderTabBarProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const colors = useColors();
+  const t = useT();
 
   const activeRoute = getFocusedRouteName(props);
 
@@ -99,7 +101,7 @@ export default function RiderTabBar(props: RiderTabBarProps) {
               style={styles.tabButton}
               onPress={() => handleTabPress(item.route)}
               accessibilityRole="button"
-              accessibilityLabel={`${item.label} tab`}
+              accessibilityLabel={t("tabs.a11y", { tab: t(item.label) })}
               accessibilityState={{ selected: isActive }}
             >
               <MaterialIcons
@@ -119,8 +121,9 @@ export default function RiderTabBar(props: RiderTabBarProps) {
                     },
                   ]}
                   numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
-                  {item.label}
+                  {t(item.label)}
                 </Text>
               </View>
             </Pressable>

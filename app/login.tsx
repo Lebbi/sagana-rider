@@ -36,6 +36,7 @@ import { buyerLoginDesign as d, manrope } from "@/constants/buyerLoginDesign";
 import { saganaTouchableActiveOpacity } from "@/constants/pressFeedback";
 import { useUser } from "@/context/UserContext";
 import { setAuthToken } from "@/lib/api";
+import { useT } from "@/lib/i18n";
 import { riderLogin } from "@/lib/riderAuthApi";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -81,6 +82,7 @@ function AuthField({
 
 export default function RiderLoginScreen() {
   const router = useRouter();
+  const t = useT();
   const { user, loadingUser, setUser } = useUser();
 
   const [email, setEmail] = useState("");
@@ -107,15 +109,15 @@ export default function RiderLoginScreen() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
   const validatePassword = (value: string) => {
-    if (!value) return "Password is required";
-    if (value.length < 6) return "Password must be at least 6 characters";
+    if (!value) return t("login.passwordRequired");
+    if (value.length < 6) return t("login.passwordShort");
     return "";
   };
 
   const handleEmailChange = (value: string) => {
     setEmail(value);
     if (value.trim() && !validateEmail(value)) {
-      setEmailError("Please enter a valid email address");
+      setEmailError(t("login.invalidEmail"));
     } else {
       setEmailError("");
     }
@@ -126,13 +128,13 @@ export default function RiderLoginScreen() {
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
     const nextEmailError = !validateEmail(trimmedEmail)
-      ? "Please enter a valid email address"
+      ? t("login.invalidEmail")
       : "";
     const nextPasswordError = validatePassword(trimmedPassword);
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
     if (nextEmailError || nextPasswordError) {
-      setErrorMessage("Please fix the errors above before continuing");
+      setErrorMessage(t("login.fixErrors"));
       return;
     }
 
@@ -153,38 +155,32 @@ export default function RiderLoginScreen() {
         message?: string;
         code?: string;
       };
-      let errorMsg = "Login failed. Please try again.";
+      let errorMsg = t("login.failed");
 
       if (err?.response?.status === 403) {
         const code = err.response.data?.error ?? "";
         if (code === "NOT_A_RIDER") {
-          errorMsg =
-            "This account is not registered as a rider. Please use the Sagana app instead.";
+          errorMsg = t("login.notRider");
         } else if (code === "RIDER_SUSPENDED") {
-          errorMsg =
-            "Your rider account is suspended. Please contact Sagana support.";
+          errorMsg = t("login.suspended");
         } else if (code === "RIDER_INACTIVE") {
-          errorMsg =
-            "Your rider account is inactive. Please contact Sagana support.";
+          errorMsg = t("login.inactive");
         } else {
-          errorMsg =
-            err.response.data?.message ??
-            "Your rider account cannot access this app. Please contact Sagana support.";
+          errorMsg = err.response.data?.message ?? t("login.noAccess");
         }
       } else if (err?.response?.status === 401) {
-        errorMsg = "Invalid email or password. Please try again.";
+        errorMsg = t("login.wrongCredentials");
       } else if (
         err?.message?.includes("Network") ||
         err?.code === "ECONNREFUSED"
       ) {
-        errorMsg =
-          "Cannot reach the server. Check your connection and try again.";
+        errorMsg = t("login.noServer");
       } else if (err?.response?.data?.message) {
         errorMsg = err.response.data.message;
       }
 
       setErrorMessage(errorMsg);
-      Alert.alert("Login Failed", errorMsg);
+      Alert.alert(t("login.failedTitle"), errorMsg);
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -211,17 +207,17 @@ export default function RiderLoginScreen() {
                   style={styles.logoIcon}
                   tintColor={d.logoOnPrimary}
                   contentFit="contain"
-                  accessibilityLabel="Sagana Rider logo"
+                  accessibilityLabel={t("login.logoA11y")}
                 />
               </View>
-              <LoginText style={styles.title}>Rider Log In</LoginText>
+              <LoginText style={styles.title}>{t("login.title")}</LoginText>
               <LoginText style={styles.subtitle}>
-                Welcome back to Sagana Rider!
+                {t("login.welcome")}
               </LoginText>
             </View>
 
             <View style={styles.form}>
-              <AuthField label="Email Address" required error={emailError}>
+              <AuthField label={t("login.email")} required error={emailError}>
                 <LoginTextInput
                   style={emailError ? styles.textInputError : undefined}
                   placeholder=""
@@ -233,7 +229,7 @@ export default function RiderLoginScreen() {
                 />
               </AuthField>
 
-              <AuthField label="Password" required error={passwordError}>
+              <AuthField label={t("login.password")} required error={passwordError}>
                 <View>
                   <LoginTextInput
                     style={[
@@ -254,7 +250,7 @@ export default function RiderLoginScreen() {
                     onPress={() => setShowPassword((v) => !v)}
                     disabled={loading}
                     accessibilityRole="button"
-                    accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+                    accessibilityLabel={showPassword ? t("login.hidePassword") : t("login.showPassword")}
                   >
                     <Ionicons
                       name={showPassword ? "eye-off" : "eye"}
@@ -279,18 +275,17 @@ export default function RiderLoginScreen() {
                 onPress={handleLogin}
                 disabled={loading}
                 accessibilityRole="button"
-                accessibilityLabel="Log in"
+                accessibilityLabel={t("login.logIn")}
               >
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <LoginText style={styles.primaryButtonText}>Log in</LoginText>
+                  <LoginText style={styles.primaryButtonText}>{t("login.logIn")}</LoginText>
                 )}
               </SaganaPressable>
 
               <LoginText style={styles.footerNote}>
-                Rider accounts are created by Sagana. Contact support if you
-                need a rider account.
+                {t("login.footer")}
               </LoginText>
             </View>
           </ScrollView>

@@ -14,6 +14,9 @@ jest.mock("expo-router", () => {
   };
 });
 jest.mock("expo-image", () => ({ Image: () => null }));
+jest.mock("@react-native-async-storage/async-storage", () =>
+  require("@react-native-async-storage/async-storage/jest/async-storage-mock"),
+);
 jest.mock("react-native-safe-area-context", () => ({
   SafeAreaView: ({ children }: { children: unknown }) => children,
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),

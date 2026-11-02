@@ -1,6 +1,8 @@
 // utils/errorHandler.ts
 import Toast from 'react-native-toast-message';
 
+import { t } from '@/lib/i18n';
+
 /**
  * Provides user-friendly error messages for different error types
  */
@@ -8,8 +10,8 @@ export const getErrorMessage = (error: any): { title: string; message: string } 
   // Network errors
   if (error.message === 'Network Error' || !error.response) {
     return {
-      title: 'Connection Error',
-      message: 'Please check your internet connection and try again',
+      title: t("errors.connectionTitle"),
+      message: t("errors.connection"),
     };
   }
 
@@ -20,44 +22,44 @@ export const getErrorMessage = (error: any): { title: string; message: string } 
   switch (status) {
     case 400:
       return {
-        title: 'Invalid Request',
-        message: serverMessage || 'The information provided is invalid. Please check and try again',
+        title: t("errors.invalidTitle"),
+        message: serverMessage || t("errors.invalid"),
       };
     
     case 401:
       return {
-        title: 'Authentication Required',
-        message: 'Please log in to continue',
+        title: t("errors.authTitle"),
+        message: t("errors.auth"),
       };
     
     case 403:
       return {
-        title: 'Access Denied',
-        message: serverMessage || 'You don\'t have permission to perform this action',
+        title: t("errors.deniedTitle"),
+        message: serverMessage || t("errors.denied"),
       };
     
     case 404:
       return {
-        title: 'Not Found',
-        message: serverMessage || 'The requested information could not be found',
+        title: t("errors.notFoundTitle"),
+        message: serverMessage || t("errors.notFound"),
       };
     
     case 409:
       return {
-        title: 'Conflict',
-        message: serverMessage || 'This action conflicts with the current state',
+        title: t("errors.conflictTitle"),
+        message: serverMessage || t("errors.conflict"),
       };
     
     case 422:
       return {
-        title: 'Validation Error',
-        message: serverMessage || 'Please check the information you provided',
+        title: t("errors.validationTitle"),
+        message: serverMessage || t("errors.validation"),
       };
     
     case 429:
       return {
-        title: 'Too Many Requests',
-        message: 'You\'re doing that too often. Please wait a moment and try again',
+        title: t("errors.rateTitle"),
+        message: t("errors.rate"),
       };
     
     case 500:
@@ -65,14 +67,14 @@ export const getErrorMessage = (error: any): { title: string; message: string } 
     case 503:
     case 504:
       return {
-        title: 'Server Error',
-        message: 'Something went wrong on our end. Please try again later',
+        title: t("errors.serverTitle"),
+        message: t("errors.server"),
       };
     
     default:
       return {
-        title: 'Error',
-        message: serverMessage || 'Something went wrong. Please try again',
+        title: t("common.error"),
+        message: serverMessage || t("errors.generic"),
       };
   }
 };

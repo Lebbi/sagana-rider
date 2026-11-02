@@ -11,6 +11,7 @@ import Toast, { type ToastConfig, type ToastConfigParams } from "react-native-to
 
 import { SaganaPressable } from "@/components/ui/SaganaPressable";
 import { fontFamily } from "@/constants/FontTheme";
+import { t } from "@/lib/i18n";
 import { saganaPalette } from "@/constants/ColorTheme";
 
 type SaganaToastVariant = "success" | "error" | "info";
@@ -94,7 +95,7 @@ function SaganaToastContent({
   // runtime when the toast was shown without an onPress handler.
   const onPressHandler = onPress as (() => void) | undefined;
 
-  const headline = (text1 && String(text1).trim()) || (text2 && String(text2).trim()) || "Update";
+  const headline = (text1 && String(text1).trim()) || (text2 && String(text2).trim()) || t("toast.update");
   const detail =
     text1 && text2 && String(text2).trim().length > 0 ? String(text2).trim() : undefined;
 

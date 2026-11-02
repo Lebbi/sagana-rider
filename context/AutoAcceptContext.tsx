@@ -26,6 +26,7 @@
 
 import { fontFamily, fontWeight } from "@/constants/FontTheme";
 import { useColors } from "@/hooks/useColors";
+import { t, useT } from "@/lib/i18n";
 import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import { useRouter } from "expo-router";
@@ -101,6 +102,7 @@ export const useAutoAccept = () => {
 export function AutoAcceptBanner() {
   const { phase, secondsLeft, pending, cancelCountdown, setAutoAcceptEnabled } = useAutoAccept();
   const colors = useColors();
+  const t = useT();
 
   if (phase !== "countdown" || !pending) return null;
 
@@ -113,18 +115,18 @@ export function AutoAcceptBanner() {
     <View style={styles.bannerWrap} pointerEvents="box-none">
       <View style={[styles.banner, { backgroundColor: colors.success }]}>
         <Text style={styles.bannerTitle}>
-          AUTO ACCEPTING AFTER {secondsLeft}s
+          {t("autoAccept.countdown", { seconds: secondsLeft })}
         </Text>
         <Text style={styles.bannerSub}>
-          Order #{pending.orderId}
+          {t("autoAccept.order", { id: pending.orderId })}
         </Text>
         <Pressable
           style={styles.notNowButton}
           onPress={handleNotNow}
           accessibilityRole="button"
-          accessibilityLabel="Not now — turn off auto accept and skip this order"
+          accessibilityLabel={t("autoAccept.notNowA11y")}
         >
-          <Text style={[styles.notNowText, { color: colors.success }]}>NOT NOW</Text>
+          <Text style={[styles.notNowText, { color: colors.success }]}>{t("autoAccept.notNow")}</Text>
         </Pressable>
       </View>
     </View>
@@ -165,7 +167,7 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
       acceptingRef.current = true;
       try {
         await acceptOrder(orderId);
-        handleApiSuccess("Order Auto-Accepted", "The order is now yours to deliver.");
+        handleApiSuccess(t("autoAccept.acceptedTitle"), t("orderDetails.acceptedBody"));
         setPhaseSafe("paused"); // hold scanning until next poll re-checks
         // Navigate to the Active Delivery page — same path as manual accept
         router.push({
@@ -182,7 +184,7 @@ export function AutoAcceptProvider({ children }: { children: ReactNode }) {
           // Transient failure (network/5xx/401) — do NOT skip the order.
           // The next poll retries it. Only permanent rejections (422) and
           // explicit "Not now" taps enter the skip-set.
-          handleApiError(e, "Auto-accept failed. Will retry.");
+          handleApiError(e, t("autoAccept.failed"));
           setPhaseSafe("scanning");
         }
       } finally {
