@@ -79,6 +79,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       gap: 8,
     },
     orderText: {
+      flexShrink: 1,
       fontFamily: fontFamily.semiBold,
       fontWeight: fontWeight.semiBold,
       fontSize: 12,

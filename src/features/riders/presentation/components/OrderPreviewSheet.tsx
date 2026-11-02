@@ -2,6 +2,7 @@ import { MaterialIcons } from "@/constants/IconTheme";
 import { fontFamily } from "@/constants/FontTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { getPreviewStops } from "@/features/riders/presentation/utils/orderPreview";
+import { t, useT } from "@/lib/i18n";
 import { getDirections } from "@/lib/routingApi";
 import type { GeoPoint, OrderItem, PreciseAddress, RiderOrder, RouteResponse } from "@/types/maps";
 import { useEffect, useMemo, useState } from "react";
@@ -24,8 +25,8 @@ const INK = "#141414";
 const MUTED = "#6B6B6B";
 
 function addressLine(a: PreciseAddress): string {
-  const text = [a.street, a.barangay, a.city].filter(Boolean).join(", ") || "Address pending";
-  return a.coordinatesMissing ? `${text}. Map pin not set, confirm by phone.` : text;
+  const text = [a.street, a.barangay, a.city].filter(Boolean).join(", ") || t("preview.addressPending");
+  return a.coordinatesMissing ? t("preview.pinNotSet", { address: text }) : text;
 }
 
 function itemLine(i: OrderItem): string {
@@ -79,6 +80,7 @@ export default function OrderPreviewSheet({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const t = useT();
   const isDarkMode = useColorScheme() === "dark";
   const { pickup, delivery, legs } = useMemo(
     () => getPreviewStops(order, riderLocation),
@@ -155,7 +157,7 @@ export default function OrderPreviewSheet({
           {routeState === "unavailable" && (
             <View style={[styles.mapNote, { top: insets.top + 64 }]}>
               <Text style={styles.mapNoteText}>
-                {legs.length ? "Route unavailable. Pins show the stops." : "Map pin not set for this order."}
+                {legs.length ? t("preview.routeUnavailable") : t("preview.noPin")}
               </Text>
             </View>
           )}
@@ -163,14 +165,14 @@ export default function OrderPreviewSheet({
             style={[styles.closeButton, { top: insets.top + 12 }]}
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="Close order preview"
+            accessibilityLabel={t("preview.close")}
           >
             <MaterialIcons name="close" size={24} color={INK} />
           </Pressable>
         </View>
 
         <View style={[styles.panel, { paddingBottom: 16 + insets.bottom }]}>
-          <Text style={styles.stopAddress}>Order {order.orderNumber}</Text>
+          <Text style={styles.stopAddress}>{t("common.orderNumber", { number: order.orderNumber })}</Text>
           <View style={styles.panelHeader}>
             <Text style={styles.fare}>{`₱${order.shippingFee.toFixed(2)}`}</Text>
             {routeState === "loading" ? (
@@ -196,7 +198,7 @@ export default function OrderPreviewSheet({
             last
           />
 
-          <Text style={styles.itemsLabel}>{`Products (${order.pickup.items.length})`}</Text>
+          <Text style={styles.itemsLabel}>{t("preview.products", { count: order.pickup.items.length })}</Text>
           <ScrollView style={styles.items} showsVerticalScrollIndicator={false}>
             {order.pickup.items.map((item, index) => (
               <Text key={`${item.productId}-${index}`} style={styles.itemText}>
@@ -210,12 +212,12 @@ export default function OrderPreviewSheet({
             onPress={() => onAccept(order.orderId)}
             disabled={accepting}
             accessibilityRole="button"
-            accessibilityLabel="Accept this order"
+            accessibilityLabel={t("preview.acceptA11y")}
           >
             {accepting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.acceptText}>Accept order</Text>
+              <Text style={styles.acceptText}>{t("preview.accept")}</Text>
             )}
           </Pressable>
         </View>

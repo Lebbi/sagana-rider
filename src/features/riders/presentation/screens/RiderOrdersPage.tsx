@@ -28,6 +28,7 @@ import { scale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT, type TextKey } from "@/lib/i18n";
 import { getRiderOrders } from "@/lib/riderOrdersApi";
 import type { DeliveryStatus, RiderOrder } from "@/types/maps";
 import { useRouter } from "expo-router";
@@ -45,6 +46,14 @@ const ORDER_TABS: OrderTab[] = [
   "Delivered",
   "Pasabay",
 ];
+
+const TAB_LABELS: Record<OrderTab, TextKey> = {
+  All: "orders.tabAll",
+  New: "orders.tabNew",
+  Processing: "orders.tabProcessing",
+  Delivered: "orders.tabDelivered",
+  Pasabay: "orders.tabPasabay",
+};
 
 /** Maps a DeliveryStatus (from the API) to the simplified tab filter. */
 function mapStatusToTab(
@@ -88,6 +97,7 @@ export default function RiderOrdersPage() {
   const styles = stylesFactory(colors);
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const [activeTab, setActiveTab] = useState<OrderTab>("All");
 
   // Measured tab geometry for the underline indicator. The old hardcoded
@@ -124,7 +134,7 @@ export default function RiderOrdersPage() {
       if (__DEV__) {
         console.warn("[RiderOrdersPage] Failed to fetch orders:", e);
       }
-      setError(e?.message ?? "Failed to load orders");
+      setError(e?.message ?? t("orders.loadFailed"));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -157,20 +167,20 @@ export default function RiderOrdersPage() {
     if (tab === "completed") {
       return (
         <View style={[styles.statusChip, styles.statusChipCompleted]}>
-          <Text style={styles.statusChipText}>COMPLETED</Text>
+          <Text style={styles.statusChipText} numberOfLines={1} adjustsFontSizeToFit>{t("orders.chipCompleted")}</Text>
         </View>
       );
     }
     if (tab === "processing") {
       return (
         <View style={[styles.statusChip, styles.statusChipProcessing]}>
-          <Text style={styles.statusChipText}>PROCESSING</Text>
+          <Text style={styles.statusChipText} numberOfLines={1} adjustsFontSizeToFit>{t("orders.chipProcessing")}</Text>
         </View>
       );
     }
     return (
       <View style={[styles.statusChip, styles.statusChipNew]}>
-        <Text style={styles.statusChipText}>NEW</Text>
+        <Text style={styles.statusChipText} numberOfLines={1} adjustsFontSizeToFit>{t("orders.chipNew")}</Text>
       </View>
     );
   };
@@ -179,7 +189,7 @@ export default function RiderOrdersPage() {
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-          <Text style={styles.headerTitle}>Orders</Text>
+          <Text style={styles.headerTitle}>{t("orders.title")}</Text>
         </View>
 
         <View style={styles.tabsWrap}>
@@ -196,15 +206,17 @@ export default function RiderOrdersPage() {
                 }}
                 onPress={() => setActiveTab(tab)}
                 accessibilityRole="button"
-                accessibilityLabel={`Show ${tab} orders`}
+                accessibilityLabel={t("orders.showTab", { tab: t(TAB_LABELS[tab]) })}
               >
                 <Text
                   style={[
                     styles.tabLabel,
                     isActive ? styles.tabLabelActive : null,
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
                 >
-                  {tab}
+                  {t(TAB_LABELS[tab])}
                 </Text>
               </Pressable>
             );
@@ -242,7 +254,7 @@ export default function RiderOrdersPage() {
               <Text
                 style={[stateStyles.loadingText, { color: colors.textMuted }]}
               >
-                Loading orders...
+                {t("orders.loading")}
               </Text>
             </View>
           )}
@@ -256,7 +268,7 @@ export default function RiderOrdersPage() {
                 color={colors.error}
               />
               <Text style={[stateStyles.errorTitle, { color: colors.text }]}>
-                Could not load orders
+                {t("orders.couldNotLoad")}
               </Text>
               <Text
                 style={[stateStyles.errorDesc, { color: colors.textMuted }]}
@@ -270,7 +282,7 @@ export default function RiderOrdersPage() {
                 ]}
                 onPress={() => fetchOrders()}
               >
-                <Text style={stateStyles.retryButtonText}>Retry</Text>
+                <Text style={stateStyles.retryButtonText}>{t("common.retry")}</Text>
               </Pressable>
             </View>
           )}
@@ -284,11 +296,10 @@ export default function RiderOrdersPage() {
                 color={colors.textMuted}
               />
               <Text style={batchStyles.comingSoonTitle}>
-                Pasabay Multi-Drop
+                {t("orders.pasabayTitle")}
               </Text>
               <Text style={batchStyles.comingSoonText}>
-                Batch deliveries with multiple farm stops in one run —
-                coming soon.
+                {t("orders.pasabayBody")}
               </Text>
             </View>
           )}
@@ -303,11 +314,11 @@ export default function RiderOrdersPage() {
                 style={styles.card}
                 onPress={() => router.push(`/rider/orders/${order.orderId}` as never)}
                 accessibilityRole="button"
-                accessibilityLabel={`View order ${order.orderNumber} details`}
+                accessibilityLabel={t("orders.viewOrder", { number: order.orderNumber })}
               >
                 <View style={styles.cardTopRow}>
                   <Text style={styles.orderText}>
-                    Order {order.orderNumber}
+                    {t("common.orderNumber", { number: order.orderNumber })}
                   </Text>
                   {renderStatusChip(order.status)}
                 </View>
@@ -316,7 +327,7 @@ export default function RiderOrdersPage() {
                 </Text>
                 <View style={styles.cardDivider} />
                 <Text style={styles.shippingText}>
-                  Shipping Fee: ₱{order.shippingFee.toFixed(2)}
+                  {t("orders.shippingFee", { amount: order.shippingFee.toFixed(2) })}
                 </Text>
               </Pressable>
             ))}
@@ -327,7 +338,7 @@ export default function RiderOrdersPage() {
             activeTab !== "Pasabay" &&
             visibleOrders.length === 0 && (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyText}>No orders in this tab yet.</Text>
+                <Text style={styles.emptyText}>{t("orders.empty")}</Text>
               </View>
             )}
         </ScrollView>

@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { fontFamily } from "@/constants/FontTheme";
+import { t, useT } from "@/lib/i18n";
 import { getRiderOrderById } from "@/lib/riderOrdersApi";
 import { acceptOrder } from "@/lib/riderOrdersApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
@@ -67,13 +68,14 @@ function resolveFarmerName(pickup: {
     pickup.businessName ??
     pickup.name ??
     pickup.farmName ??
-    "Farmer"
+    t("common.farmer")
   );
 }
 
 export default function RiderOrderDetailScreen() {
   const colors = useColors();
   const router = useRouter();
+  const t = useT();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const orderId = id ? parseInt(id, 10) : 0;
 
@@ -98,7 +100,7 @@ export default function RiderOrderDetailScreen() {
         setOrder(data);
       } catch (e: any) {
         if (!mounted) return;
-        setError(e?.message ?? "Failed to load order details");
+        setError(e?.message ?? t("orderDetails.loadFailed"));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -114,7 +116,7 @@ export default function RiderOrderDetailScreen() {
     setAccepting(true);
     try {
       await acceptOrder(orderId);
-      handleApiSuccess("Order Accepted", "The order is now yours to deliver.");
+      handleApiSuccess(t("status.accepted"), t("orderDetails.acceptedBody"));
       router.replace({
         pathname: "/tabs/ActiveDeliveryPage",
         params: { orderId: String(orderId) },
@@ -123,9 +125,9 @@ export default function RiderOrderDetailScreen() {
       const status = e?.response?.status;
       const msg = e?.response?.data?.message;
       if (status === 422) {
-        handleApiError(e, msg ?? "This order was just taken by another rider.");
+        handleApiError(e, msg ?? t("orderDetails.taken"));
       } else {
-        handleApiError(e, "Could not accept the order. Please try again.");
+        handleApiError(e, t("orderDetails.acceptFailed"));
       }
     } finally {
       setAccepting(false);
@@ -139,7 +141,7 @@ export default function RiderOrderDetailScreen() {
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={{ marginTop: 12, fontSize: 12, color: colors.textMuted }}>
-              Loading order...
+              {t("orderDetails.loading")}
             </Text>
           </View>
         </SafeAreaView>
@@ -153,10 +155,10 @@ export default function RiderOrderDetailScreen() {
         <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
           <View style={styles.errorWrap}>
             <MaterialIcons name={IconTheme.alertCircle} size={40} color={colors.error} />
-            <Text style={styles.errorTitle}>Could not load order</Text>
-            <Text style={styles.errorDesc}>{error ?? "Order not found"}</Text>
+            <Text style={styles.errorTitle}>{t("orderDetails.couldNotLoad")}</Text>
+            <Text style={styles.errorDesc}>{error ?? t("orderDetails.notFound")}</Text>
             <Pressable style={styles.retryButton} onPress={() => router.back()}>
-              <Text style={styles.retryButtonText}>Go Back</Text>
+              <Text style={styles.retryButtonText}>{t("common.goBack")}</Text>
             </Pressable>
           </View>
         </SafeAreaView>
@@ -165,6 +167,7 @@ export default function RiderOrderDetailScreen() {
   }
 
   const stepStates = getTimelineStepStates(order.status);
+  const statusLabel = STATUS_TIMELINE.find((s) => s.status === order.status)?.label;
   const farmerName = resolveFarmerName(order.pickup);
 
   return (
@@ -179,13 +182,13 @@ export default function RiderOrderDetailScreen() {
             <Pressable style={styles.backButton} onPress={() => router.back()}>
               <MaterialIcons name="arrow-back" size={24} color={colors.primary} />
             </Pressable>
-            <Text style={styles.headerTitle}>Order Details</Text>
+            <Text style={styles.headerTitle}>{t("orderDetails.title")}</Text>
             <View style={{ width: 44 }} />
           </View>
 
           {/* Order Number & Status */}
           <View style={styles.orderHeader}>
-            <Text style={styles.orderNumber}>Order {order.orderNumber}</Text>
+            <Text style={styles.orderNumber}>{t("common.orderNumber", { number: order.orderNumber })}</Text>
             <View
               style={[
                 styles.statusChip,
@@ -212,14 +215,14 @@ export default function RiderOrderDetailScreen() {
                   },
                 ]}
               >
-                {order.status.replace(/_/g, " ").toUpperCase()}
+                {statusLabel ? t(statusLabel).toUpperCase() : order.status.replace(/_/g, " ").toUpperCase()}
               </Text>
             </View>
           </View>
 
           {/* Timeline */}
           <View style={styles.timelineSection}>
-            <Text style={styles.sectionTitle}>Delivery Timeline</Text>
+            <Text style={styles.sectionTitle}>{t("orderDetails.timeline")}</Text>
             <View style={styles.timeline}>
               {STATUS_TIMELINE.map((step, index) => {
                 const state = stepStates[index];
@@ -270,10 +273,10 @@ export default function RiderOrderDetailScreen() {
                           isFuture && styles.timelineLabelFuture,
                         ]}
                       >
-                        {step.label}
+                        {t(step.label)}
                       </Text>
                       {isCurrent && (
-                        <Text style={styles.timelineCurrentBadge}>CURRENT</Text>
+                        <Text style={styles.timelineCurrentBadge}>{t("orderDetails.current")}</Text>
                       )}
                     </View>
                   </View>
@@ -284,15 +287,15 @@ export default function RiderOrderDetailScreen() {
 
           {/* Fee & Earnings */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Earnings</Text>
+            <Text style={styles.cardTitle}>{t("orderDetails.earnings")}</Text>
             <View style={styles.earningsRow}>
               <View style={styles.earningsItem}>
-                <Text style={styles.earningsLabel}>Delivery Fee</Text>
+                <Text style={styles.earningsLabel}>{t("orderDetails.deliveryFee")}</Text>
                 <Text style={styles.earningsValue}>₱{order.shippingFee.toFixed(2)}</Text>
               </View>
               {order.codAmount != null && order.codAmount > 0 && (
                 <View style={styles.earningsItem}>
-                  <Text style={styles.earningsLabel}>Cash on Delivery</Text>
+                  <Text style={styles.earningsLabel}>{t("orderDetails.cod")}</Text>
                   <Text style={styles.earningsValue}>₱{order.codAmount.toFixed(2)}</Text>
                 </View>
               )}
@@ -301,25 +304,25 @@ export default function RiderOrderDetailScreen() {
 
           {/* Pickup Details */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Pickup Details</Text>
+            <Text style={styles.cardTitle}>{t("orderDetails.pickupDetails")}</Text>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.store} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Seller</Text>
+                <Text style={styles.detailLabel}>{t("orderDetails.seller")}</Text>
                 <Text style={styles.detailValue}>{farmerName}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.phone} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Contact</Text>
+                <Text style={styles.detailLabel}>{t("common.contact")}</Text>
                 <Text style={styles.detailValue}>{order.pickup.farmerPhone}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.mapMarkerOutline} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Pickup Address</Text>
+                <Text style={styles.detailLabel}>{t("orderDetails.pickupAddress")}</Text>
                 <Text style={styles.detailValue}>
                   {[order.pickup.address.street, order.pickup.address.barangay, order.pickup.address.city, order.pickup.address.province]
                     .filter(Boolean)
@@ -331,14 +334,14 @@ export default function RiderOrderDetailScreen() {
               <View style={styles.detailRow}>
                 <MaterialIcons name={IconTheme.location} size={20} color={colors.primary} />
                 <View style={styles.detailTextWrap}>
-                  <Text style={styles.detailLabel}>Landmark</Text>
+                  <Text style={styles.detailLabel}>{t("orderDetails.landmark")}</Text>
                   <Text style={styles.detailValue}>{order.pickup.address.landmarkNote}</Text>
                 </View>
               </View>
             )}
 
             {/* Items */}
-            <Text style={[styles.cardTitle, { marginTop: 16 }]}>Items to Collect</Text>
+            <Text style={[styles.cardTitle, { marginTop: 16 }]}>{t("orderDetails.itemsToCollect")}</Text>
             {order.pickup.items.map((item, index) => (
               <View key={index} style={styles.itemRow}>
                 <Text style={styles.itemText}>{formatOrderItem(item)}</Text>
@@ -348,25 +351,25 @@ export default function RiderOrderDetailScreen() {
 
           {/* Delivery Details */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Delivery Details</Text>
+            <Text style={styles.cardTitle}>{t("orderDetails.deliveryDetails")}</Text>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.user} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Buyer</Text>
+                <Text style={styles.detailLabel}>{t("orderDetails.buyer")}</Text>
                 <Text style={styles.detailValue}>{order.delivery.buyerName}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.phone} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Contact</Text>
+                <Text style={styles.detailLabel}>{t("common.contact")}</Text>
                 <Text style={styles.detailValue}>{order.delivery.buyerPhone}</Text>
               </View>
             </View>
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.mapMarkerOutline} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>Drop-off Address</Text>
+                <Text style={styles.detailLabel}>{t("orderDetails.dropoffAddress")}</Text>
                 <Text style={styles.detailValue}>
                   {[order.delivery.address.street, order.delivery.address.barangay, order.delivery.address.city, order.delivery.address.province]
                     .filter(Boolean)
@@ -378,7 +381,7 @@ export default function RiderOrderDetailScreen() {
               <View style={styles.detailRow}>
                 <MaterialIcons name={IconTheme.message} size={20} color={colors.primary} />
                 <View style={styles.detailTextWrap}>
-                  <Text style={styles.detailLabel}>Note</Text>
+                  <Text style={styles.detailLabel}>{t("orderDetails.note")}</Text>
                   <Text style={styles.detailValue}>{order.delivery.noteToRider}</Text>
                 </View>
               </View>
@@ -398,7 +401,7 @@ export default function RiderOrderDetailScreen() {
               {accepting ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={styles.acceptButtonText}>ACCEPT ORDER</Text>
+                <Text style={styles.acceptButtonText}>{t("orderDetails.acceptCta")}</Text>
               )}
             </Pressable>
           )}
@@ -448,6 +451,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   orderNumber: {
+    flexShrink: 1,
     fontFamily: fontFamily.bold,
     fontSize: 18,
     color: "#1E1E1E",

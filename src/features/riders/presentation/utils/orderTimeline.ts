@@ -1,15 +1,16 @@
+import type { TextKey } from "@/lib/i18n";
 import type { DeliveryStatus } from "@/types/maps";
 
-export const STATUS_TIMELINE: { status: DeliveryStatus; label: string; icon: string }[] = [
-  { status: "searching", label: "Searching for Rider", icon: "radio-button-unchecked" },
-  { status: "accepted", label: "Order Accepted", icon: "check-circle" },
-  { status: "to_pickup", label: "En Route to Pickup", icon: "local-shipping" },
-  { status: "arrived_pickup", label: "Arrived at Pickup", icon: "location-on" },
-  { status: "picked_up", label: "Items Collected", icon: "inventory-2" },
-  { status: "to_delivery", label: "En Route to Delivery", icon: "local-shipping" },
-  { status: "arrived_delivery", label: "Arrived at Delivery", icon: "location-on" },
-  { status: "delivered", label: "Delivered", icon: "check-circle" },
-  { status: "cancelled", label: "Cancelled", icon: "cancel" },
+export const STATUS_TIMELINE: { status: DeliveryStatus; label: TextKey; icon: string }[] = [
+  { status: "searching", label: "status.searching", icon: "radio-button-unchecked" },
+  { status: "accepted", label: "status.accepted", icon: "check-circle" },
+  { status: "to_pickup", label: "status.toPickup", icon: "local-shipping" },
+  { status: "arrived_pickup", label: "status.arrivedPickup", icon: "location-on" },
+  { status: "picked_up", label: "status.pickedUp", icon: "inventory-2" },
+  { status: "to_delivery", label: "status.toDelivery", icon: "local-shipping" },
+  { status: "arrived_delivery", label: "status.arrivedDelivery", icon: "location-on" },
+  { status: "delivered", label: "status.delivered", icon: "check-circle" },
+  { status: "cancelled", label: "status.cancelled", icon: "cancel" },
 ];
 
 export type TimelineStepState = "done" | "current" | "future";
