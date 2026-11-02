@@ -8,7 +8,6 @@ import {
     Modal,
     Pressable,
     ScrollView,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -100,7 +99,6 @@ export default function RiderProfile() {
   const language = getLanguage();
 
   const [activeVehicleIndex, setActiveVehicleIndex] = useState(0);
-  const [isDarkModeEnabled, setIsDarkModeEnabled] = useState(false);
   const [selectedTextSize, setSelectedTextSize] = useState<TextKey>("textSize.medium");
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState(false);
   const [isTextSizeModalVisible, setIsTextSizeModalVisible] = useState(false);
@@ -498,27 +496,6 @@ export default function RiderProfile() {
                 />
               </View>
             </TouchableOpacity>
-            <View style={styles.settingRow}>
-              <View style={styles.settingLeft}>
-                <View style={styles.settingIconCircle}>
-                  <MaterialIcons
-                    name={IconTheme.moon}
-                    size={15}
-                    color={colors.success}
-                  />
-                </View>
-                <Text style={styles.settingLabel}>{t("profile.darkMode")}</Text>
-              </View>
-              <Switch
-                value={isDarkModeEnabled}
-                onValueChange={setIsDarkModeEnabled}
-                thumbColor={isDarkModeEnabled ? colors.success : undefined}
-                trackColor={{
-                  false: "#D0D0D0",
-                  true: colors.success ? `${colors.success}88` : undefined,
-                }}
-              />
-            </View>
             <TouchableOpacity
               style={styles.settingRow}
               onPress={() => setIsTextSizeModalVisible(true)}

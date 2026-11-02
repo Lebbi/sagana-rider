@@ -51,7 +51,6 @@ export const en = {
   "profile.terms": "Terms and Conditions",
   "profile.notifications": "Notifications",
   "profile.language": "Language",
-  "profile.darkMode": "Dark Mode",
   "profile.textSize": "Text Size",
   "profile.reportProblem": "Report a problem",
   "profile.help": "Help",

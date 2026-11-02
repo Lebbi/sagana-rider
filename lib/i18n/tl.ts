@@ -53,7 +53,6 @@ export const tl: Translation = {
   "profile.terms": "Mga Tuntunin at Kondisyon",
   "profile.notifications": "Mga Notification",
   "profile.language": "Wika",
-  "profile.darkMode": "Dark Mode",
   "profile.textSize": "Laki ng Text",
   "profile.reportProblem": "Mag-report ng problema",
   "profile.help": "Tulong",
