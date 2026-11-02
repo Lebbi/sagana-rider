@@ -25,7 +25,7 @@ import type { GeoPoint, RouteResponse } from "@/types/maps";
 import Constants from "expo-constants";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 
 // Read the Google Maps API key from the config plugin's output.
 // The key is injected at build time into Constants.extra.googleMapsApiKey
@@ -47,9 +47,18 @@ interface NativeMapViewProps {
   onMapReady?: () => void;
   /** Pins besides the destination, such as the farmer while heading to the buyer. */
   extraStops?: MapStop[];
+  /** Pins drawn only while inside the visible map area; they never move the camera. */
+  areaPins?: GeoPoint[];
 }
 
 type MapStop = { point: GeoPoint; type: "pickup" | "delivery" };
+
+function isInRegion(region: Region, point: GeoPoint): boolean {
+  return (
+    Math.abs(point.latitude - region.latitude) <= region.latitudeDelta / 2 &&
+    Math.abs(point.longitude - region.longitude) <= region.longitudeDelta / 2
+  );
+}
 
 function StopPin({ type }: { type: MapStop["type"] }) {
   return (
@@ -80,6 +89,7 @@ export default function NativeMapView({
   isDarkMode,
   onMapReady,
   extraStops,
+  areaPins,
 }: NativeMapViewProps) {
   const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
@@ -95,6 +105,7 @@ export default function NativeMapView({
         riderHeading={riderHeading}
         onMapReady={onMapReady}
         extraStops={extraStops}
+        areaPins={areaPins}
       />
     );
   }
@@ -111,6 +122,7 @@ export default function NativeMapView({
       isDarkMode={isDarkMode}
       onMapReady={onMapReady}
       extraStops={extraStops}
+      areaPins={areaPins}
     />
   );
 }
@@ -121,7 +133,7 @@ export default function NativeMapView({
 function geoToOverlayPercent(
   center: GeoPoint,
   point: GeoPoint,
-): { leftPct: number; topPct: number } {
+): { leftPct: number; topPct: number; inside: boolean } {
   const z = 13;
   const n = Math.pow(2, z);
   const fx = (lng: number) => ((lng + 180) / 360) * n;
@@ -138,6 +150,7 @@ function geoToOverlayPercent(
   return {
     leftPct: Math.max(2, Math.min(98, leftPct)),
     topPct: Math.max(2, Math.min(98, topPct)),
+    inside: leftPct >= 0 && leftPct <= 100 && topPct >= 0 && topPct <= 100,
   };
 }
 
@@ -154,6 +167,7 @@ function ExpoGoMap({
   riderHeading,
   onMapReady,
   extraStops,
+  areaPins,
 }: {
   destination: GeoPoint | null;
   destinationType: "pickup" | "delivery";
@@ -163,6 +177,7 @@ function ExpoGoMap({
   riderHeading: number | null;
   onMapReady?: () => void;
   extraStops?: MapStop[];
+  areaPins?: GeoPoint[];
 }) {
   const colors = useColors();
   const t = useT();
@@ -204,6 +219,23 @@ function ExpoGoMap({
             pointerEvents="none"
           >
             <StopPin type={stop.type} />
+          </View>
+        );
+      })}
+
+      {areaPins?.map((point, index) => {
+        const pos = geoToOverlayPercent(center, point);
+        if (!pos.inside) return null;
+        return (
+          <View
+            key={`pin-${index}`}
+            style={[
+              styles.riderMarkerOverlay,
+              { left: `${pos.leftPct}%`, top: `${pos.topPct}%` },
+            ]}
+            pointerEvents="none"
+          >
+            <StopPin type="pickup" />
           </View>
         );
       })}
@@ -258,6 +290,7 @@ function NativeMap({
   isDarkMode,
   onMapReady,
   extraStops,
+  areaPins,
 }: NativeMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const colors = useColors();
@@ -271,6 +304,8 @@ function NativeMap({
     latitudeDelta: 0.02,
     longitudeDelta: 0.02,
   };
+  const [visibleRegion, setVisibleRegion] = useState<Region | null>(null);
+  const shownPins = areaPins?.filter((p) => isInRegion(visibleRegion ?? region, p));
 
   // Fit map to show route + rider + destination
   useEffect(() => {
@@ -328,6 +363,7 @@ function NativeMap({
         mapType="standard"
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
+        onRegionChangeComplete={setVisibleRegion}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
@@ -356,6 +392,16 @@ function NativeMap({
             tracksViewChanges={false}
           >
             <StopPin type={stop.type} />
+          </Marker>
+        ))}
+
+        {shownPins?.map((point, index) => (
+          <Marker
+            key={`pin-${index}`}
+            coordinate={{ latitude: point.latitude, longitude: point.longitude }}
+            tracksViewChanges={false}
+          >
+            <StopPin type="pickup" />
           </Marker>
         ))}
 

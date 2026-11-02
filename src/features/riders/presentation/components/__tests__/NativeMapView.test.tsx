@@ -48,7 +48,7 @@ const farmer = { latitude: 15.03, longitude: 120.69 };
 const buyer = { latitude: 15.05, longitude: 120.7 };
 
 // The map picks Google Maps or tiles when its module loads, so each case loads a fresh copy.
-function renderMap(): ReactTestRenderer {
+function renderMap(props: Record<string, unknown> = {}): ReactTestRenderer {
   let tree!: ReactTestRenderer;
   jest.isolateModules(() => {
     const { act, create } = require("react-test-renderer");
@@ -63,6 +63,7 @@ function renderMap(): ReactTestRenderer {
           destinationType="delivery"
           extraStops={[{ point: farmer, type: "pickup" }]}
           isDarkMode={false}
+          {...props}
         />,
       );
     });
@@ -89,5 +90,26 @@ describe("NativeMapView on a phone", () => {
   it("shows the farmer pin beside the buyer pin on the keyless tile map", () => {
     mockMapsKey = "";
     expect(pinIcons(renderMap())).toEqual(["home", "warehouse"]);
+  });
+
+  const nearOrder = { latitude: 15.052, longitude: 120.701 };
+  const farOrder = { latitude: 16.4, longitude: 120.6 };
+
+  it("shows available-order pins only inside the visible area on Google Maps", () => {
+    mockMapsKey = "key";
+    const tree = renderMap({
+      extraStops: undefined,
+      areaPins: [nearOrder, farOrder],
+    });
+    expect(pinIcons(tree)).toEqual(["home", "warehouse"]);
+  });
+
+  it("shows available-order pins only inside the visible area on the keyless tile map", () => {
+    mockMapsKey = "";
+    const tree = renderMap({
+      extraStops: undefined,
+      areaPins: [nearOrder, farOrder],
+    });
+    expect(pinIcons(tree)).toEqual(["home", "warehouse"]);
   });
 });

@@ -411,6 +411,11 @@ export default function DriverHomepageScreen() {
   // live GPS (falling back to the service-area default until a fix arrives).
   const mapCenter: GeoPoint = mapDestination ?? riderLocation ?? DEFAULT_MAP_CENTER;
 
+  const availablePins: GeoPoint[] = availableOrders
+    .map((o) => o.pickup.address)
+    .filter((a) => !a.coordinatesMissing)
+    .map((a) => ({ latitude: a.latitude, longitude: a.longitude }));
+
   const previewOrder = availableOrders.find((o) => o.orderId === previewOrderId) ?? null;
   const activeCard = activeOrder ? toOrderCard(activeOrder, true, riderLocation ?? undefined) : null;
   const availableCards = availableOrders
@@ -497,6 +502,7 @@ export default function DriverHomepageScreen() {
               destination={mapDestination}
               destinationType="delivery"
               center={mapCenter}
+              areaPins={availablePins}
               isDarkMode={false}
             />
 
