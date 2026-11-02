@@ -169,6 +169,17 @@ export function useRiderNavigation(
       setGpsAccuracy(initialPos.coords.accuracy ?? null);
       setLocationStatus("granted");
 
+      lastBroadcastRef.current = Date.now();
+      broadcastRiderLocation(
+        orderId,
+        initialLocation.latitude,
+        initialLocation.longitude,
+        initialPos.coords.heading ?? null,
+        initialPos.coords.speed ?? null,
+      ).catch(() => {
+        // Silent fail — broadcasting is best-effort
+      });
+
       // Fetch route to destination
       await fetchRoute(initialLocation);
 
@@ -177,7 +188,8 @@ export function useRiderNavigation(
         {
           accuracy: Location.Accuracy.Highest,
           timeInterval: GPS_UPDATE_INTERVAL,
-          distanceInterval: 5,
+          // A rider waiting at the farm must keep reporting, or the buyer sees a stale pin.
+          distanceInterval: 0,
         },
         (location) => {
           if (!isNavigatingRef.current) return;
