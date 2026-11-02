@@ -264,6 +264,13 @@ export default function ActiveDeliveryPage() {
     return { latitude: addr.latitude, longitude: addr.longitude };
   }, [order, activePhase]);
 
+  // After pickup the farmer is no longer the destination, but riders still want their pin on the map.
+  const farmerStop = useMemo(() => {
+    const addr = order?.pickup.address;
+    if (activePhase !== 2 || !addr || addr.coordinatesMissing) return undefined;
+    return [{ point: { latitude: addr.latitude, longitude: addr.longitude }, type: "pickup" as const }];
+  }, [order, activePhase]);
+
   // Start navigation hook
   const nav = useRiderNavigation({
     orderId: numericOrderId,
@@ -752,8 +759,8 @@ export default function ActiveDeliveryPage() {
               destination ?? { latitude: 15.0319, longitude: 120.6894 }
             }
             destinationType={activePhase === 1 ? "pickup" : "delivery"}
+            extraStops={farmerStop}
             isDarkMode={isDarkMode}
-            onPress={handleMapPress}
           />
           </View>
 
