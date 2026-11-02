@@ -1,5 +1,13 @@
-import { ActivityIndicator, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 
+import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { stylesFactory } from "@/features/riders/presentation/styles/RiderWalletPage.styles";
 import {
   SafeAreaView,
@@ -11,12 +19,29 @@ import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 
+// Keep this true to PAY-07: the backend has no rider withdrawal yet.
+const WALLET_INFO = [
+  {
+    heading: "Earnings",
+    body: "You get the delivery fee for each order you deliver. It's added to your balance when the order is marked delivered.",
+  },
+  {
+    heading: "Your balance",
+    body: "Available Balance adds up your delivery earnings. Total earnings is everything you've earned since you started.",
+  },
+  {
+    heading: "Withdrawals",
+    body: "You can't withdraw from the app yet, so this balance can't be cashed out here for now.",
+  },
+];
+
 export default function RiderWalletPage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const insets = useSafeAreaInsets();
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInfoVisible, setIsInfoVisible] = useState(false);
 
   // useFocusEffect re-fetches whenever the rider returns to this tab
   // (e.g. after completing a delivery) — useEffect only ran on mount.
@@ -55,6 +80,19 @@ export default function RiderWalletPage() {
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
         <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
           <Text style={styles.headerTitle}>Wallet</Text>
+          <Pressable
+            style={styles.headerInfoButton}
+            onPress={() => setIsInfoVisible(true)}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="How your wallet works"
+          >
+            <MaterialIcons
+              name={IconTheme.infoCircleOutlined}
+              size={22}
+              color={colors.text}
+            />
+          </Pressable>
         </View>
 
         <ScrollView
@@ -123,6 +161,37 @@ export default function RiderWalletPage() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      <Modal
+        visible={isInfoVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsInfoVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsInfoVisible(false)}
+        >
+          <Pressable style={styles.modalSheet} onPress={() => null}>
+            <Text style={styles.modalTitle}>How your wallet works</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {WALLET_INFO.map(({ heading, body }) => (
+                <View key={heading} style={styles.modalSection}>
+                  <Text style={styles.modalHeading}>{heading}</Text>
+                  <Text style={styles.modalBody}>{body}</Text>
+                </View>
+              ))}
+            </ScrollView>
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => setIsInfoVisible(false)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.modalCloseText}>Close</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
