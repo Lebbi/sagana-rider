@@ -10,6 +10,7 @@
 
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT } from "@/lib/i18n";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -44,6 +45,7 @@ export default function NativeMapView({
 }: NativeMapViewProps) {
   const mapRef = useRef<any>(null);
   const colors = useColors();
+  const t = useT();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
@@ -209,7 +211,7 @@ export default function NativeMapView({
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.primary }]}>
-            Loading map...
+            {t("map.loading")}
           </Text>
         </View>
       )}
@@ -218,10 +220,10 @@ export default function NativeMapView({
         <View style={styles.errorOverlay}>
           <MaterialIcons name="cloud-off" size={40} color={colors.error} />
           <Text style={[styles.errorText, { color: colors.error }]}>
-            Map failed to load
+            {t("map.failed")}
           </Text>
           <Text style={[styles.errorSubtext, { color: colors.textSecondary }]}>
-            Check your internet connection
+            {t("map.checkInternet")}
           </Text>
         </View>
       )}

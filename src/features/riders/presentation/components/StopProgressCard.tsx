@@ -18,6 +18,7 @@
  */
 
 import { scale, verticalScale } from "@/constants/DesignSystem";
+import { useT } from "@/lib/i18n";
 import { fontFamily } from "@/constants/FontTheme";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
@@ -58,6 +59,7 @@ export default function StopProgressCard({
   distanceKm,
 }: StopProgressCardProps) {
   const colors = useColors();
+  const t = useT();
 
   const isPickup = nextStopType === "pickup";
   const progressPercent = totalStops > 0 ? (currentStop - 1) / totalStops : 0;
@@ -67,7 +69,7 @@ export default function StopProgressCard({
       {/* Top row: stop counter + type badge */}
       <View style={styles.topRow}>
         <Text style={[styles.stopCounter, { color: colors.text }]}>
-          Stop {currentStop} of {totalStops}
+          {t("stops.counter", { current: currentStop, total: totalStops })}
         </Text>
         <View
           style={[
@@ -85,7 +87,7 @@ export default function StopProgressCard({
             color={colors.primary}
           />
           <Text style={[styles.typeBadgeText, { color: colors.primary }]}>
-            {isPickup ? "Pickup" : "Delivery"}
+            {isPickup ? t("common.pickup") : t("common.delivery")}
           </Text>
         </View>
       </View>
@@ -136,7 +138,7 @@ export default function StopProgressCard({
           color={colors.textMuted}
         />
         <Text style={[styles.etaText, { color: colors.textMuted }]}>
-          {etaMinutes <= 0 ? "Arriving" : `ETA ${etaMinutes} min`}
+          {etaMinutes <= 0 ? t("common.arriving") : t("stops.eta", { minutes: etaMinutes })}
           {distanceKm != null && distanceKm > 0
             ? ` • ${distanceKm.toFixed(1)} km`
             : ""}
@@ -167,6 +169,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   stopCounter: {
+    flexShrink: 1,
     fontSize: scale(18),
     fontFamily: fontFamily.bold,
   },

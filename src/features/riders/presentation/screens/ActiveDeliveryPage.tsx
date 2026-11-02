@@ -35,6 +35,7 @@ import { cancelOrder, getRiderOrderById, getRiderOrders, updateOrderStatus } fro
 import type { CancelReason } from "@/lib/riderOrdersApi";
 import { showSaganaToast } from "@/components/ui/saganaToastConfig";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
+import { t, useT, type TextKey } from "@/lib/i18n";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
 
 const removePhotoStyle = {
@@ -52,11 +53,11 @@ const removePhotoStyle = {
 const DRAG_DISMISS_THRESHOLD = 64;
 const PEEK_HEIGHT_GUESS = 260;
 
-const CANCEL_REASONS: { value: CancelReason; label: string }[] = [
-  { value: "vehicle_breakdown", label: "Vehicle Breakdown" },
-  { value: "unreachable_contact", label: "Unreachable Farmer/Buyer" },
-  { value: "emergency", label: "Emergency" },
-  { value: "other", label: "Other" },
+const CANCEL_REASONS: { value: CancelReason; label: TextKey }[] = [
+  { value: "vehicle_breakdown", label: "delivery.reasonBreakdown" },
+  { value: "unreachable_contact", label: "delivery.reasonUnreachable" },
+  { value: "emergency", label: "delivery.reasonEmergency" },
+  { value: "other", label: "delivery.reasonOther" },
 ];
 
 /**
@@ -79,14 +80,14 @@ function formatOrderItem(item: { productName: string; variationName?: string; qu
  * Returns 'Farmer' if pickup is undefined or no name fields present.
  */
 function resolveFarmerName(pickup?: { farmerName?: string; shopName?: string; businessName?: string; name?: string; farmName?: string }): string {
-  if (!pickup) return "Farmer";
+  if (!pickup) return t("common.farmer");
   return (
     pickup.farmerName
     ?? pickup.shopName
     ?? pickup.businessName
     ?? pickup.name
     ?? pickup.farmName
-    ?? "Farmer"
+    ?? t("common.farmer")
   );
 }
 
@@ -96,7 +97,7 @@ function resolveFarmerName(pickup?: { farmerName?: string; shopName?: string; bu
  * Returns "Address pending" if pickup is undefined or no address fields present.
  */
 function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?: string; city?: string; province?: string }; barangay?: string; city?: string }): string {
-  if (!pickup) return "Address pending";
+  if (!pickup) return t("common.addressPending");
   const addr = pickup.address;
   if (addr && (addr.street || addr.barangay || addr.city || addr.province)) {
     return [addr.street, addr.barangay, addr.city, addr.province].filter(Boolean).join(", ");
@@ -105,19 +106,21 @@ function resolvePickupAddress(pickup?: { address?: { street?: string; barangay?:
   if (pickup.barangay || pickup.city) {
     return [pickup.barangay, pickup.city].filter(Boolean).join(", ");
   }
-  return "Address pending";
+  return t("common.addressPending");
 }
 
 function MapPinNote() {
+  const t = useT();
   return (
     <Text style={{ fontSize: 10.8, color: "#ba1a1a", marginTop: 4 }}>
-      Map pin not set. Confirm the exact address by phone before heading out.
+      {t("delivery.pinMissing")}
     </Text>
   );
 }
 
 export default function ActiveDeliveryPage() {
   const router = useRouter();
+  const t = useT();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const { orderId } = useLocalSearchParams<{ orderId?: string }>();
@@ -380,8 +383,8 @@ export default function ActiveDeliveryPage() {
         handleApiError(
           e,
           status === 422
-            ? msg ?? "Could not mark items as collected. Try again."
-            : "Could not save your progress. Check your connection and re-check the items.",
+            ? msg ?? t("delivery.collectFailed")
+            : t("delivery.progressFailed"),
         );
         hasCompletedPhaseOneRef.current = false;
       } finally {
@@ -401,13 +404,13 @@ export default function ActiveDeliveryPage() {
         type: "error",
         text1:
           nav.locationStatus === "denied"
-            ? "Location is off"
-            : "Couldn’t get your location",
+            ? t("delivery.locationOff")
+            : t("delivery.locationFailed"),
         text2:
           nav.locationStatus === "denied"
-            ? "Turn it on to see your route and ETA."
-            : "Tap to check settings.",
-        actionHint: "Open settings",
+            ? t("delivery.locationOffBody")
+            : t("delivery.locationFailedBody"),
+        actionHint: t("delivery.openSettings"),
         onPress: () => Linking.openSettings(),
       });
     }
@@ -477,7 +480,7 @@ export default function ActiveDeliveryPage() {
     if (!perm.granted) {
       handleApiError(
         new Error("Camera permission denied"),
-        "Camera access is needed to take proof photos.",
+        t("delivery.cameraNeeded"),
       );
       return null;
     }
@@ -512,8 +515,8 @@ export default function ActiveDeliveryPage() {
     try {
       await updateOrderStatus(id, "delivered", deliveryPhotos[0]);
       handleApiSuccess(
-        "Delivery Complete",
-        "Earnings have been added to your wallet.",
+        t("delivery.completeTitle"),
+        t("delivery.completeBody"),
       );
       loadOrder(null);
       router.replace("/tabs" as never);
@@ -523,8 +526,8 @@ export default function ActiveDeliveryPage() {
       handleApiError(
         e,
         status === 422
-          ? msg ?? "Could not complete the delivery. Try again."
-          : "Could not save the delivery. Check your connection and try again.",
+          ? msg ?? t("delivery.completeFailed")
+          : t("delivery.saveFailed"),
       );
     } finally {
       setIsSyncingStatus(false);
@@ -539,8 +542,8 @@ export default function ActiveDeliveryPage() {
     try {
       await cancelOrder(id, selectedCancelReason as CancelReason);
       handleApiSuccess(
-        "Delivery Cancelled",
-        "The order has been released back to the available pool.",
+        t("delivery.cancelledTitle"),
+        t("delivery.cancelledBody"),
       );
       setShowCancelModal(false);
       setSelectedCancelReason("");
@@ -552,8 +555,8 @@ export default function ActiveDeliveryPage() {
       handleApiError(
         e,
         status === 422
-          ? msg ?? "Could not cancel the delivery. Try again."
-          : "Could not cancel the delivery. Check your connection and try again.",
+          ? msg ?? t("delivery.cancelFailed")
+          : t("delivery.cancelNetworkFailed"),
       );
     } finally {
       setIsSyncingStatus(false);
@@ -568,7 +571,7 @@ export default function ActiveDeliveryPage() {
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
             <ActivityIndicator size="large" color="#087434" />
             <Text style={{ marginTop: 12, fontSize: 14.4, color: "#7A7A7A" }}>
-              Loading order...
+              {t("orderDetails.loading")}
             </Text>
           </View>
         </SafeAreaView>
@@ -585,10 +588,10 @@ export default function ActiveDeliveryPage() {
           <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }}>
             <MaterialIcons name="check-circle-outline" size={64} color="#087434" />
             <Text style={{ marginTop: 16, fontSize: 19.2, fontWeight: "600", color: "#1B1B1B", textAlign: "center" }}>
-              No Active Delivery
+              {t("delivery.noActiveTitle")}
             </Text>
             <Text style={{ marginTop: 8, fontSize: 14.4, color: "#7A7A7A", textAlign: "center" }}>
-              Accept an order from the Home tab to start a delivery.
+              {t("delivery.noActiveBody")}
             </Text>
           </View>
         </SafeAreaView>
@@ -612,7 +615,7 @@ export default function ActiveDeliveryPage() {
 
   const itemsChecklist = (
     <>
-              <Text style={styles.sectionLabel}>ITEMS TO COLLECT</Text>
+              <Text style={styles.sectionLabel}>{t("delivery.itemsToCollect")}</Text>
               <View style={styles.checkboxGroup}>
                 {(order?.pickup.items ?? []).map((item, index) => {
                   const itemLabel = formatOrderItem(item);
@@ -626,7 +629,7 @@ export default function ActiveDeliveryPage() {
                         checked: checkedItems[index],
                         disabled: activePhase !== 1,
                       }}
-                      accessibilityLabel={`Mark item collected: ${itemLabel}`}
+                      accessibilityLabel={t("delivery.markItem", { item: itemLabel })}
                     >
                       <MaterialIcons
                         name={
@@ -653,7 +656,7 @@ export default function ActiveDeliveryPage() {
                 ]}
                 onPress={handleTakePickupPhoto}
                 accessibilityRole="button"
-                accessibilityLabel="Take photo of produce at pickup"
+                accessibilityLabel={t("delivery.producePhotoA11y")}
               >
                 <MaterialIcons
                   name={pickupPhoto ? IconTheme.checkCircle : IconTheme.camera}
@@ -661,7 +664,7 @@ export default function ActiveDeliveryPage() {
                   color="#087434"
                 />
                 <Text style={styles.captureButtonText}>
-                  {pickupPhoto ? "PRODUCE PHOTO TAKEN" : "TAKE PHOTO OF PRODUCE"}
+                  {pickupPhoto ? t("delivery.producePhotoTaken") : t("delivery.takeProducePhoto")}
                 </Text>
               </Pressable>
   );
@@ -674,7 +677,7 @@ export default function ActiveDeliveryPage() {
                 ]}
                 onPress={handleTakeDeliveryPhoto}
                 accessibilityRole="button"
-                accessibilityLabel="Take photo of delivered package"
+                accessibilityLabel={t("delivery.deliveryPhotoA11y")}
               >
                 <MaterialIcons
                   name={
@@ -687,8 +690,8 @@ export default function ActiveDeliveryPage() {
                 />
                 <Text style={styles.captureButtonText}>
                   {deliveryPhotos.length > 0
-                    ? "DELIVERY PHOTO TAKEN"
-                    : "TAKE PHOTO OF DELIVERY"}
+                    ? t("delivery.deliveryPhotoTaken")
+                    : t("delivery.takeDeliveryPhoto")}
                 </Text>
               </Pressable>
   );
@@ -704,7 +707,7 @@ export default function ActiveDeliveryPage() {
                 onPress={handleMarkDelivered}
                 disabled={isSyncingStatus || deliveryPhotos.length === 0}
                 accessibilityRole="button"
-                accessibilityLabel="Mark order as delivered"
+                accessibilityLabel={t("delivery.markDeliveredA11y")}
               >
                 {isSyncingStatus ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
@@ -723,7 +726,7 @@ export default function ActiveDeliveryPage() {
                         },
                       ]}
                     >
-                      MARK AS DELIVERED
+                      {t("delivery.markDelivered")}
                     </Text>
                   </>
                 )}
@@ -778,7 +781,7 @@ export default function ActiveDeliveryPage() {
               style={[styles.headerActionButton, { marginRight: 4 }]}
               onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Go back to home"
+              accessibilityLabel={t("delivery.goHome")}
             >
               <MaterialIcons name="arrow-back" size={21} color="#087434" />
             </Pressable>
@@ -790,7 +793,7 @@ export default function ActiveDeliveryPage() {
             <View style={styles.topBarTextWrap}>
               <Text style={styles.topBarName}>{headerName}</Text>
               <Text style={styles.topBarNumber}>{headerNumber}</Text>
-              <Text style={styles.topBarNumber}>Order {order?.orderNumber}</Text>
+              <Text style={styles.topBarNumber}>{t("common.orderNumber", { number: order?.orderNumber ?? "" })}</Text>
             </View>
             <View style={styles.topBarActions}>
               {isPhaseOne && (
@@ -798,7 +801,7 @@ export default function ActiveDeliveryPage() {
                   style={styles.headerActionButton}
                   onPress={() => setShowCancelModal(true)}
                   accessibilityRole="button"
-                  accessibilityLabel="Cancel delivery"
+                  accessibilityLabel={t("delivery.cancelA11y")}
                 >
                   <MaterialIcons
                     name={IconTheme.closeCircle}
@@ -821,7 +824,7 @@ export default function ActiveDeliveryPage() {
                   // rider app v1 — the phone button above is the contact path.
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="Messages unavailable"
+                accessibilityLabel={t("delivery.messagesUnavailable")}
               >
                 <MaterialIcons
                   name={IconTheme.message}
@@ -844,7 +847,7 @@ export default function ActiveDeliveryPage() {
               style={styles.mapControlButton}
               onPress={nav.reroute}
               accessibilityRole="button"
-              accessibilityLabel="Recenter map"
+              accessibilityLabel={t("delivery.recenter")}
             >
               <MaterialIcons
                 name={IconTheme.compass}
@@ -902,8 +905,10 @@ export default function ActiveDeliveryPage() {
                   styles.phasePillText,
                   isPhaseOne ? styles.phasePillTextActive : null,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
-                Phase 1: Going to Farmer
+                {t("delivery.phaseOne")}
               </Text>
             </View>
             <View
@@ -917,8 +922,10 @@ export default function ActiveDeliveryPage() {
                   styles.phasePillText,
                   !isPhaseOne ? styles.phasePillTextActive : null,
                 ]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
               >
-                Phase 2: Going to Buyer
+                {t("delivery.phaseTwo")}
               </Text>
             </View>
           </View>
@@ -926,7 +933,7 @@ export default function ActiveDeliveryPage() {
           {isPhaseOne ? (
             <View style={styles.sheetBody}>
               <View style={styles.badgeWrap}>
-                <Text style={styles.badgeText}>Current Pickup</Text>
+                <Text style={styles.badgeText}>{t("delivery.currentPickup")}</Text>
               </View>
               <Text style={styles.mainTargetName}>
                 {resolveFarmerName(order.pickup)}
@@ -973,7 +980,7 @@ export default function ActiveDeliveryPage() {
                     style={removePhotoStyle}
                     onPress={() => setPickupPhoto(null)}
                     accessibilityRole="button"
-                    accessibilityLabel="Remove pickup photo"
+                    accessibilityLabel={t("delivery.removePickupPhoto")}
                   >
                     <MaterialIcons name="close" size={14} color="#FFFFFF" />
                   </Pressable>
@@ -989,17 +996,17 @@ export default function ActiveDeliveryPage() {
                     textAlign: "center",
                   }}
                 >
-                  Take a photo of the produce to complete pickup.
+                  {t("delivery.producePhotoHint")}
                 </Text>
               )}
             </View>
           ) : (
             <View style={styles.sheetBody}>
               <View style={styles.badgeWrap}>
-                <Text style={styles.badgeText}>Current Delivery</Text>
+                <Text style={styles.badgeText}>{t("delivery.currentDelivery")}</Text>
               </View>
               <Text style={styles.mainTargetName}>
-                {order.delivery.buyerName ?? "Buyer"}
+                {order.delivery.buyerName ?? t("common.buyer")}
               </Text>
               <View style={styles.locationRow}>
                 <MaterialIcons
@@ -1054,7 +1061,7 @@ export default function ActiveDeliveryPage() {
                             )
                           }
                           accessibilityRole="button"
-                          accessibilityLabel="Remove delivery photo"
+                          accessibilityLabel={t("delivery.removeDeliveryPhoto")}
                         >
                           <MaterialIcons name="close" size={14} color="#FFFFFF" />
                         </Pressable>
@@ -1077,7 +1084,7 @@ export default function ActiveDeliveryPage() {
                     }}
                     onPress={handleTakeDeliveryPhoto}
                     accessibilityRole="button"
-                    accessibilityLabel="Add another delivery photo"
+                    accessibilityLabel={t("delivery.addPhotoA11y")}
                   >
                     <MaterialIcons name="add-a-photo" size={16} color="#087434" />
                     <Text
@@ -1088,7 +1095,7 @@ export default function ActiveDeliveryPage() {
                         letterSpacing: 0.5,
                       }}
                     >
-                      ADD ANOTHER PHOTO
+                      {t("delivery.addPhoto")}
                     </Text>
                   </Pressable>
                 </>
@@ -1103,7 +1110,7 @@ export default function ActiveDeliveryPage() {
                     textAlign: "center",
                   }}
                 >
-                  Take a photo of the delivered package first.
+                  {t("delivery.deliveryPhotoHint")}
                 </Text>
               )}
 
@@ -1125,7 +1132,7 @@ export default function ActiveDeliveryPage() {
         <View style={styles.phaseTransitionOverlay}>
           <View style={styles.phaseTransitionCard}>
             <ActivityIndicator size="small" color="#087434" />
-            <Text style={styles.phaseTransitionText}>Phase 1 complete</Text>
+            <Text style={styles.phaseTransitionText}>{t("delivery.phaseOneDone")}</Text>
           </View>
         </View>
       </Modal>
@@ -1141,7 +1148,7 @@ export default function ActiveDeliveryPage() {
           <View style={styles.phaseTransitionCard}>
             <ActivityIndicator size="small" color="#087434" />
             <Text style={styles.phaseTransitionText}>
-              {activePhase === 1 ? "Completing pickup..." : "Completing delivery..."}
+              {activePhase === 1 ? t("delivery.completingPickup") : t("delivery.completingDelivery")}
             </Text>
           </View>
         </View>
@@ -1156,9 +1163,9 @@ export default function ActiveDeliveryPage() {
       >
         <View style={styles.cancelModalOverlay}>
           <View style={styles.cancelModalCard}>
-            <Text style={styles.cancelModalTitle}>Cancel Delivery?</Text>
+            <Text style={styles.cancelModalTitle}>{t("delivery.cancelTitle")}</Text>
             <Text style={styles.cancelModalSubtitle}>
-              Select a reason for cancelling this delivery:
+              {t("delivery.cancelPrompt")}
             </Text>
             <View style={styles.cancelReasonList}>
               {CANCEL_REASONS.map((reason) => (
@@ -1182,7 +1189,7 @@ export default function ActiveDeliveryPage() {
                         : null,
                     ]}
                   />
-                  <Text style={styles.cancelReasonLabel}>{reason.label}</Text>
+                  <Text style={styles.cancelReasonLabel}>{t(reason.label)}</Text>
                 </Pressable>
               ))}
             </View>
@@ -1195,7 +1202,7 @@ export default function ActiveDeliveryPage() {
                 }}
                 disabled={isSyncingStatus}
               >
-                <Text style={styles.cancelModalButtonTextSecondary}>Back</Text>
+                <Text style={styles.cancelModalButtonTextSecondary}>{t("common.back")}</Text>
               </Pressable>
               <Pressable
                 style={[
@@ -1211,7 +1218,7 @@ export default function ActiveDeliveryPage() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.cancelModalButtonTextPrimary}>
-                    Confirm Cancel
+                    {t("delivery.confirmCancel")}
                   </Text>
                 )}
               </Pressable>

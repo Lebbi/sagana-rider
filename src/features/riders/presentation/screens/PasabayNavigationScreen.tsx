@@ -23,6 +23,7 @@ import StopProgressCard from "@/features/riders/presentation/components/StopProg
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { useColors } from "@/hooks/useColors";
+import { t, useT } from "@/lib/i18n";
 import { useColorScheme } from "@/hooks/useColorScheme";
 import { getRiderOrders } from "@/lib/riderOrdersApi";
 import { optimizeRoute } from "@/lib/routingApi";
@@ -60,7 +61,7 @@ function formatAddress(stop: OptimizedStop): string {
     stop.address.barangay,
     stop.address.city,
   ].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "Address pending";
+  return parts.length > 0 ? parts.join(", ") : t("common.addressPending");
 }
 
 // ============================================================
@@ -70,6 +71,7 @@ function formatAddress(stop: OptimizedStop): string {
 export default function PasabayNavigationScreen() {
   const router = useRouter();
   const colors = useColors();
+  const t = useT();
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === "dark";
   const { batchId } = useLocalSearchParams<{ batchId?: string }>();
@@ -111,7 +113,7 @@ export default function PasabayNavigationScreen() {
         if (!mounted) return;
 
         if (availableOrders.length === 0) {
-          setError("No available orders to batch right now.");
+          setError(t("pasabay.noOrders"));
           return;
         }
 
@@ -153,7 +155,7 @@ export default function PasabayNavigationScreen() {
         if (__DEV__) {
           console.warn("[PasabayNav] Failed to fetch batch:", e);
         }
-        setError(e?.message ?? "Failed to load delivery batch");
+        setError(e?.message ?? t("pasabay.loadFailed"));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -210,7 +212,7 @@ export default function PasabayNavigationScreen() {
       >
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={[styles.loadingText, { color: colors.textMuted }]}>
-          Optimizing delivery route...
+          {t("pasabay.optimizing")}
         </Text>
       </View>
     );
@@ -228,17 +230,17 @@ export default function PasabayNavigationScreen() {
           color={colors.error}
         />
         <Text style={[styles.errorTitle, { color: colors.text }]}>
-          Could not load batch
+          {t("pasabay.couldNotLoad")}
         </Text>
         <Text style={[styles.errorDesc, { color: colors.textMuted }]}>
-          {error ?? "No stops available"}
+          {error ?? t("pasabay.noStops")}
         </Text>
         <Pressable
           style={[styles.errorButton, { backgroundColor: colors.primary }]}
           onPress={() => router.back()}
         >
           <Text style={[styles.errorButtonText, { color: colors.white }]}>
-            Go Back
+            {t("common.goBack")}
           </Text>
         </Pressable>
       </View>
@@ -318,13 +320,16 @@ export default function PasabayNavigationScreen() {
               />
               <View style={styles.sheetHeaderText}>
                 <Text style={[styles.sheetTitle, { color: colors.text }]}>
-                  {isPickup ? "Pickup Items" : "Delivery Items"}
+                  {isPickup ? t("pasabay.pickupItems") : t("pasabay.deliveryItems")}
                 </Text>
                 <Text
                   style={[styles.sheetSubtitle, { color: colors.textMuted }]}
                 >
-                  Order {batch?.orders.find((o) => o.orderId === currentStop.orderId)?.orderNumber} • Stop {currentStopIndex + 1} of{" "}
-                  {totalStops}
+                  {t("pasabay.subtitle", {
+                    number: batch?.orders.find((o) => o.orderId === currentStop.orderId)?.orderNumber ?? "",
+                    current: currentStopIndex + 1,
+                    total: totalStops,
+                  })}
                 </Text>
               </View>
             </View>
@@ -354,7 +359,7 @@ export default function PasabayNavigationScreen() {
               <Pressable
                 style={[styles.callButton, { backgroundColor: colors.primary }]}
                 accessibilityRole="button"
-                accessibilityLabel="Call contact"
+                accessibilityLabel={t("pasabay.call")}
               >
                 <MaterialIcons
                   name={IconTheme.phone}
@@ -366,7 +371,7 @@ export default function PasabayNavigationScreen() {
 
             {/* Items list */}
             <Text style={[styles.itemsLabel, { color: colors.text }]}>
-              Items
+              {t("pasabay.items")}
             </Text>
             {currentStop.items.length > 0 ? (
               currentStop.items.map((item, index) => (
@@ -399,7 +404,7 @@ export default function PasabayNavigationScreen() {
               ))
             ) : (
               <Text style={[styles.emptyItems, { color: colors.textMuted }]}>
-                No items to display for this stop.
+                {t("pasabay.noItems")}
               </Text>
             )}
 
@@ -416,7 +421,7 @@ export default function PasabayNavigationScreen() {
               onPress={handleConfirmStop}
               accessibilityRole="button"
               accessibilityLabel={
-                isPickup ? "Confirm pickup" : "Confirm delivery"
+                isPickup ? t("pasabay.confirmPickupA11y") : t("pasabay.confirmDeliveryA11y")
               }
             >
               <MaterialIcons
@@ -426,10 +431,12 @@ export default function PasabayNavigationScreen() {
               />
               <Text style={styles.confirmButtonText}>
                 {isConfirmed
-                  ? "Confirmed — Advancing..."
+                  ? t("pasabay.advancing")
                   : isLastStop
-                    ? "Complete Final Stop"
-                    : `Confirm ${isPickup ? "Pickup" : "Delivery"} & Next Stop`}
+                    ? t("pasabay.completeFinal")
+                    : isPickup
+                      ? t("pasabay.confirmPickupNext")
+                      : t("pasabay.confirmDeliveryNext")}
               </Text>
             </Pressable>
           </ScrollView>
@@ -583,6 +590,7 @@ const styles = StyleSheet.create({
     marginTop: verticalScale(8),
   },
   confirmButtonText: {
+    flexShrink: 1,
     fontSize: scale(16),
     fontFamily: fontFamily.semiBold,
     color: "#fff",

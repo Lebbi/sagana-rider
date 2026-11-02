@@ -17,6 +17,7 @@
  */
 
 import api from "@/lib/api";
+import { t, type TextKey } from "@/lib/i18n";
 import type {
     GeoPoint,
     ManeuverType,
@@ -256,47 +257,27 @@ function mapManeuverType(type: string, modifier: string): ManeuverType {
   return "straight";
 }
 
+// [with a road name, without one]; "straight" and unknown maneuvers continue.
+const INSTRUCTIONS: Record<ManeuverType, [TextKey, TextKey]> = {
+  arrive: ["nav.arrive", "nav.arrive"],
+  depart: ["nav.departOnto", "nav.depart"],
+  "turn-left": ["nav.leftOnto", "nav.left"],
+  "turn-right": ["nav.rightOnto", "nav.right"],
+  "turn-slight-left": ["nav.slightLeftOnto", "nav.slightLeft"],
+  "turn-slight-right": ["nav.slightRightOnto", "nav.slightRight"],
+  "turn-sharp-left": ["nav.sharpLeftOnto", "nav.sharpLeft"],
+  "turn-sharp-right": ["nav.sharpRightOnto", "nav.sharpRight"],
+  roundabout: ["nav.roundaboutOnto", "nav.roundabout"],
+  merge: ["nav.mergeOnto", "nav.merge"],
+  fork: ["nav.forkOnto", "nav.fork"],
+  uturn: ["nav.uturn", "nav.uturn"],
+  straight: ["nav.continueOnto", "nav.continue"],
+};
+
 function formatInstruction(step: any, maneuverType: ManeuverType): string {
   const name = step.name ?? "";
-  const type = step.maneuver?.type ?? "";
-
-  if (maneuverType === "arrive") {
-    return "Arrive at your destination";
-  }
-  if (maneuverType === "depart") {
-    return name ? `Head toward ${name}` : "Start driving";
-  }
-  if (maneuverType === "turn-left") {
-    return name ? `Turn left onto ${name}` : "Turn left";
-  }
-  if (maneuverType === "turn-right") {
-    return name ? `Turn right onto ${name}` : "Turn right";
-  }
-  if (maneuverType === "turn-slight-left") {
-    return name ? `Keep slightly left onto ${name}` : "Keep slightly left";
-  }
-  if (maneuverType === "turn-slight-right") {
-    return name ? `Keep slightly right onto ${name}` : "Keep slightly right";
-  }
-  if (maneuverType === "turn-sharp-left") {
-    return name ? `Sharp left onto ${name}` : "Sharp left";
-  }
-  if (maneuverType === "turn-sharp-right") {
-    return name ? `Sharp right onto ${name}` : "Sharp right";
-  }
-  if (maneuverType === "roundabout") {
-    return name ? `Enter roundabout and exit onto ${name}` : "Enter roundabout";
-  }
-  if (maneuverType === "merge") {
-    return name ? `Merge onto ${name}` : "Merge";
-  }
-  if (maneuverType === "fork") {
-    return name ? `Stay on ${name}` : "Stay on current road";
-  }
-  if (maneuverType === "uturn") {
-    return "Make a U-turn";
-  }
-  return name ? `Continue on ${name}` : "Continue";
+  const [withName, withoutName] = INSTRUCTIONS[maneuverType] ?? INSTRUCTIONS.straight;
+  return name ? t(withName, { name }) : t(withoutName);
 }
 
 // ============================================================

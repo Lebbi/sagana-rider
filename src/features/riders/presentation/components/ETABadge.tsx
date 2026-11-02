@@ -10,6 +10,7 @@
 import { scale, verticalScale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -28,6 +29,7 @@ export default function ETABadge({
   isNavigating = true,
 }: ETABadgeProps) {
   const colors = useColors();
+  const t = useT();
   const [displayMinutes, setDisplayMinutes] = useState(minutes);
   const lastUpdateRef = useRef(Date.now());
 
@@ -48,7 +50,7 @@ export default function ETABadge({
     return () => clearInterval(interval);
   }, [minutes, isNavigating]);
 
-  const etaText = displayMinutes <= 0 ? "Arriving" : `${displayMinutes} min`;
+  const etaText = displayMinutes <= 0 ? t("common.arriving") : t("common.minutes", { minutes: displayMinutes });
   const distText = distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : "";
 
   return (

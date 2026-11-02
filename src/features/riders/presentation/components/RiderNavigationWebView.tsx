@@ -25,6 +25,7 @@ import {
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { useT } from "@/lib/i18n";
 import { WebView } from "react-native-webview";
 import { LEAFLET_CSS, LEAFLET_JS } from "./leafletSource";
 
@@ -62,6 +63,7 @@ export default function RiderNavigationWebView({
   isDarkMode,
   onMapReady,
 }: RiderNavigationWebViewProps) {
+  const t = useT();
   const webViewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -229,9 +231,9 @@ export default function RiderNavigationWebView({
         renderError={() => (
           <View style={styles.errorContainer}>
             <MaterialIcons name="cloud-off" size={40} color="#8ecb95" />
-            <Text style={styles.errorText}>Map failed to load</Text>
+            <Text style={styles.errorText}>{t("map.failed")}</Text>
             <Text style={styles.errorSubtext}>
-              Check your internet connection
+              {t("map.checkInternet")}
             </Text>
           </View>
         )}
@@ -239,31 +241,33 @@ export default function RiderNavigationWebView({
       {isLoading && !showFallback && (
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color="#8ecb95" />
-          <Text style={styles.loadingText}>Loading map...</Text>
+          <Text style={styles.loadingText}>{t("map.loading")}</Text>
         </View>
       )}
       {showFallback && (
         <View style={styles.fallbackOverlay}>
           <View style={styles.fallbackPlaceholder}>
             <MaterialIcons name="map" size={48} color="#8ecb95" />
-            <Text style={styles.fallbackTitle}>Map preview unavailable</Text>
+            <Text style={styles.fallbackTitle}>{t("map.previewUnavailable")}</Text>
             <Text style={styles.fallbackSubtext}>
-              Destination: {destination.latitude.toFixed(4)},{" "}
-              {destination.longitude.toFixed(4)}
+              {t("map.destination", {
+                lat: destination.latitude.toFixed(4),
+                lng: destination.longitude.toFixed(4),
+              })}
             </Text>
           </View>
           <View style={styles.fallbackBadge}>
             <MaterialIcons name="cloud-off" size={16} color="#8ecb95" />
-            <Text style={styles.fallbackText}>Live map is loading slowly</Text>
+            <Text style={styles.fallbackText}>{t("map.loadingSlowly")}</Text>
           </View>
         </View>
       )}
       {hasError && !isLoading && !showFallback && (
         <View style={styles.errorOverlay}>
           <MaterialIcons name="cloud-off" size={40} color="#8ecb95" />
-          <Text style={styles.errorText}>Map failed to load</Text>
+          <Text style={styles.errorText}>{t("map.failed")}</Text>
           <Text style={styles.errorSubtext}>
-            Check your internet connection
+            {t("map.checkInternet")}
           </Text>
         </View>
       )}

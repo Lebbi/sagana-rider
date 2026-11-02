@@ -11,6 +11,7 @@ import { scale, verticalScale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT } from "@/lib/i18n";
 import type { ManeuverType, RouteStep } from "@/types/maps";
 import * as Haptics from "expo-haptics";
 import * as Speech from "expo-speech";
@@ -59,6 +60,7 @@ export default function TurnByTurnCard({
   etaMinutes,
 }: TurnByTurnCardProps) {
   const colors = useColors();
+  const t = useT();
   const lastSpokenStepRef = useRef<string | null>(null);
   const lastHapticDistanceRef = useRef<number | null>(null);
 
@@ -125,7 +127,7 @@ export default function TurnByTurnCard({
     if (lastSpokenStepRef.current === stepKey) return;
     lastSpokenStepRef.current = stepKey;
 
-    speakInstruction("You have arrived at your destination");
+    speakInstruction(t("nav.arrivedSpoken"));
     triggerHaptic("success");
   }, [currentStep, speakInstruction, triggerHaptic]);
 
@@ -145,7 +147,7 @@ export default function TurnByTurnCard({
           style={[styles.instructionText, { color: colors.textSecondary }]}
           numberOfLines={1}
         >
-          Calculating route...
+          {t("nav.calculating")}
         </Text>
       </View>
     );
@@ -197,7 +199,7 @@ export default function TurnByTurnCard({
               style={[styles.nextStepText, { color: colors.textMuted }]}
               numberOfLines={1}
             >
-              Then: {nextStep.instruction}
+              {t("nav.then", { instruction: nextStep.instruction })}
             </Text>
           ) : null}
         </View>
@@ -209,7 +211,7 @@ export default function TurnByTurnCard({
           {etaMinutes}
         </Text>
         <Text style={[styles.etaLabel, { color: colors.textSecondary }]}>
-          min
+          {t("nav.min")}
         </Text>
       </View>
     </View>

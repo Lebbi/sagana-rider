@@ -18,6 +18,7 @@
 
 import { MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
+import { useT } from "@/lib/i18n";
 import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
@@ -137,6 +138,7 @@ function ExpoGoMap({
   onMapReady?: () => void;
 }) {
   const colors = useColors();
+  const t = useT();
   const [isLoading, setIsLoading] = useState(true);
 
   // Signal ready on mount — tiles load asynchronously via expo-image
@@ -206,7 +208,7 @@ function ExpoGoMap({
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.primary }]}>
-            Loading map...
+            {t("map.loading")}
           </Text>
         </View>
       )}
@@ -230,6 +232,7 @@ function NativeMap({
 }: NativeMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const colors = useColors();
+  const t = useT();
   const [isLoading, setIsLoading] = useState(true);
   const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
 
@@ -379,7 +382,7 @@ function NativeMap({
         <View style={styles.loadingOverlay} pointerEvents="none">
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={[styles.loadingText, { color: colors.primary }]}>
-            Loading map...
+            {t("map.loading")}
           </Text>
         </View>
       )}

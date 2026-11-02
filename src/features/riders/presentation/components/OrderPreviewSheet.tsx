@@ -25,7 +25,7 @@ const INK = "#141414";
 const MUTED = "#6B6B6B";
 
 function addressLine(a: PreciseAddress): string {
-  const text = [a.street, a.barangay, a.city].filter(Boolean).join(", ") || t("preview.addressPending");
+  const text = [a.street, a.barangay, a.city].filter(Boolean).join(", ") || t("common.addressPending");
   return a.coordinatesMissing ? t("preview.pinNotSet", { address: text }) : text;
 }
 

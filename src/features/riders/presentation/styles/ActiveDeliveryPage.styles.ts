@@ -233,6 +233,7 @@ export const styles = StyleSheet.create({
     minHeight: 72,
   },
   captureButtonText: {
+    flexShrink: 1,
     fontFamily: "StackSansHeadline_700Bold",
     fontSize: 7.8,
     color: "#087434",

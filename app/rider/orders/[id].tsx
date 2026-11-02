@@ -355,7 +355,7 @@ export default function RiderOrderDetailScreen() {
             <View style={styles.detailRow}>
               <MaterialIcons name={IconTheme.user} size={20} color={colors.primary} />
               <View style={styles.detailTextWrap}>
-                <Text style={styles.detailLabel}>{t("orderDetails.buyer")}</Text>
+                <Text style={styles.detailLabel}>{t("common.buyer")}</Text>
                 <Text style={styles.detailValue}>{order.delivery.buyerName}</Text>
               </View>
             </View>
