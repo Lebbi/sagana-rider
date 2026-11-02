@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { en } from "../i18n/en";
-import { pam } from "../i18n/pam";
 import { tl } from "../i18n/tl";
 import { getLanguage, loadLanguage, setLanguage, t, type TextKey } from "../i18n";
 
@@ -43,13 +42,19 @@ describe("t", () => {
 
 describe("language choice", () => {
   it("survives a restart", async () => {
-    setLanguage("pam");
+    setLanguage("tl");
     await Promise.resolve();
-    expect(await AsyncStorage.getItem("sagana.language")).toBe("pam");
+    expect(await AsyncStorage.getItem("sagana.language")).toBe("tl");
     setLanguage("en");
+    await AsyncStorage.setItem("sagana.language", "tl");
+    await loadLanguage();
+    expect(getLanguage()).toBe("tl");
+  });
+
+  it("loads a saved Kapampangan choice as English", async () => {
     await AsyncStorage.setItem("sagana.language", "pam");
     await loadLanguage();
-    expect(getLanguage()).toBe("pam");
+    expect(getLanguage()).toBe("en");
   });
 
   it("ignores an unknown saved value", async () => {
@@ -59,10 +64,7 @@ describe("language choice", () => {
   });
 });
 
-describe.each([
-  ["Tagalog", tl],
-  ["Kapampangan", pam],
-])("%s file", (_name, dict) => {
+describe.each([["Tagalog", tl]])("%s file", (_name, dict) => {
   it("has no blank entries, no unknown keys, and the same placeholders as English", () => {
     for (const [key, text] of Object.entries(dict)) {
       expect(key in en).toBe(true);

@@ -2,20 +2,18 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSyncExternalStore } from "react";
 
 import { en } from "./en";
-import { pam } from "./pam";
 import { tl } from "./tl";
 
-export type Language = "en" | "tl" | "pam";
+export type Language = "en" | "tl";
 export type TextKey = keyof typeof en;
 export type Translation = Partial<Record<TextKey, string>>;
 
 export const LANGUAGES: readonly { id: Language; label: string }[] = [
   { id: "en", label: "English" },
   { id: "tl", label: "Tagalog" },
-  { id: "pam", label: "Kapampangan" },
 ];
 
-const dictionaries: Record<Language, Translation> = { en, tl, pam };
+const dictionaries: Record<Language, Translation> = { en, tl };
 const STORAGE_KEY = "sagana.language";
 
 let current: Language = "en";
