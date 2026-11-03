@@ -36,6 +36,7 @@ import {
   checkRiderApplication,
   needsPlate,
   riderRegister,
+  type ApplicationPhotoField,
   type RiderApplicationDraft,
   type RiderApplicationField,
 } from "@/lib/riderAuthApi";
@@ -53,6 +54,17 @@ const VEHICLE_OPTIONS: {
   { value: "tricycle", label: "vehicle.tricycle", icon: "two-wheeler" },
 ];
 
+const PHOTO_FIELDS: {
+  field: ApplicationPhotoField;
+  label: TextKey;
+  a11y: TextKey;
+  selfie?: true;
+}[] = [
+  { field: "license_photo", label: "register.license", a11y: "register.photoA11y" },
+  { field: "nbi_clearance_photo", label: "register.nbi", a11y: "register.nbiA11y" },
+  { field: "selfie_photo", label: "register.selfie", a11y: "register.selfieA11y", selfie: true },
+];
+
 const EMPTY_DRAFT: RiderApplicationDraft = {
   name: "",
   email: "",
@@ -61,6 +73,8 @@ const EMPTY_DRAFT: RiderApplicationDraft = {
   vehicle_type: null,
   vehicle_plate_number: "",
   license_photo: null,
+  nbi_clearance_photo: null,
+  selfie_photo: null,
 };
 
 type FieldErrors = Partial<Record<RiderApplicationField, string>>;
@@ -90,13 +104,16 @@ export default function RiderRegisterScreen() {
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const pickPhoto = async (source: "camera" | "library") => {
+  const pickPhoto = async (
+    field: ApplicationPhotoField,
+    source: "camera" | "library",
+  ) => {
     if (source === "camera") {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
       if (!perm.granted) {
         setFieldErrors((prev) => ({
           ...prev,
-          license_photo: t("register.cameraNeeded"),
+          [field]: t("register.cameraNeeded"),
         }));
         return;
       }
@@ -104,6 +121,9 @@ export default function RiderRegisterScreen() {
     const options: ImagePicker.ImagePickerOptions = {
       mediaTypes: ["images"],
       quality: 0.6,
+      ...(field === "selfie_photo"
+        ? { cameraType: ImagePicker.CameraType.front }
+        : {}),
     };
     const result =
       source === "camera"
@@ -112,9 +132,9 @@ export default function RiderRegisterScreen() {
     const asset = result.canceled ? null : result.assets?.[0];
     if (!asset) return;
     const type = asset.mimeType ?? "image/jpeg";
-    update("license_photo", {
+    update(field, {
       uri: asset.uri,
-      name: asset.fileName ?? `license.${type.split("/")[1] ?? "jpg"}`,
+      name: asset.fileName ?? `${field}.${type.split("/")[1] ?? "jpg"}`,
       type,
       size: asset.fileSize,
     });
@@ -342,44 +362,60 @@ export default function RiderRegisterScreen() {
               </AuthField>
             ) : null}
 
-            <AuthField
-              label={t("register.license")}
-              required
-              error={fieldErrors.license_photo}
-            >
-              {draft.license_photo ? (
-                <Image
-                  source={{ uri: draft.license_photo.uri }}
-                  style={styles.photoPreview}
-                  contentFit="cover"
-                  accessibilityLabel={t("register.photoA11y")}
-                />
-              ) : null}
-              <View style={styles.photoButtons}>
-                <SaganaPressable
-                  style={styles.secondaryButton}
-                  onPress={() => pickPhoto("camera")}
-                  disabled={sending}
-                  accessibilityRole="button"
+            {PHOTO_FIELDS.map(({ field, label, a11y, selfie }) => {
+              const photo = draft[field];
+              return (
+                <AuthField
+                  key={field}
+                  label={t(label)}
+                  required
+                  error={fieldErrors[field]}
                 >
-                  <Ionicons name="camera" size={18} color={d.primary} />
-                  <LoginText style={styles.secondaryButtonText}>
-                    {t("register.takePhoto")}
-                  </LoginText>
-                </SaganaPressable>
-                <SaganaPressable
-                  style={styles.secondaryButton}
-                  onPress={() => pickPhoto("library")}
-                  disabled={sending}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="images" size={18} color={d.primary} />
-                  <LoginText style={styles.secondaryButtonText}>
-                    {t("register.choosePhoto")}
-                  </LoginText>
-                </SaganaPressable>
-              </View>
-            </AuthField>
+                  {selfie ? (
+                    <LoginText style={styles.photoHint}>
+                      {t("register.selfieHint")}
+                    </LoginText>
+                  ) : null}
+                  {photo ? (
+                    <Image
+                      source={{ uri: photo.uri }}
+                      style={[
+                        styles.photoPreview,
+                        selfie ? styles.selfiePreview : undefined,
+                      ]}
+                      contentFit="cover"
+                      accessibilityLabel={t(a11y)}
+                    />
+                  ) : null}
+                  <View style={styles.photoButtons}>
+                    <SaganaPressable
+                      style={styles.secondaryButton}
+                      onPress={() => pickPhoto(field, "camera")}
+                      disabled={sending}
+                      accessibilityRole="button"
+                    >
+                      <Ionicons name="camera" size={18} color={d.primary} />
+                      <LoginText style={styles.secondaryButtonText}>
+                        {t(selfie ? "register.takeSelfie" : "register.takePhoto")}
+                      </LoginText>
+                    </SaganaPressable>
+                    {selfie ? null : (
+                      <SaganaPressable
+                        style={styles.secondaryButton}
+                        onPress={() => pickPhoto(field, "library")}
+                        disabled={sending}
+                        accessibilityRole="button"
+                      >
+                        <Ionicons name="images" size={18} color={d.primary} />
+                        <LoginText style={styles.secondaryButtonText}>
+                          {t("register.choosePhoto")}
+                        </LoginText>
+                      </SaganaPressable>
+                    )}
+                  </View>
+                </AuthField>
+              );
+            })}
 
             {errorMessage ? (
               <View style={styles.errorBanner}>
@@ -511,6 +547,17 @@ const styles = StyleSheet.create({
     borderRadius: d.radius,
     marginBottom: 10,
     backgroundColor: d.inputBg,
+  },
+  selfiePreview: {
+    width: "60%",
+    aspectRatio: 0.8,
+    alignSelf: "center",
+  },
+  photoHint: {
+    fontFamily: manrope.medium,
+    fontSize: 13,
+    color: d.subtitle,
+    marginBottom: 8,
   },
   photoButtons: {
     flexDirection: "row",

@@ -18,6 +18,8 @@ class RecordingFormData {
 }
 
 const photo = { uri: "file:///license.jpg", name: "license.jpg", type: "image/jpeg", size: 1_000_000 };
+const nbi = { uri: "file:///nbi.jpg", name: "nbi.jpg", type: "image/jpeg", size: 900_000 };
+const selfie = { uri: "file:///selfie.jpg", name: "selfie.jpg", type: "image/jpeg", size: 800_000 };
 
 const draft = (over: Partial<RiderApplicationDraft> = {}): RiderApplicationDraft => ({
   name: " Juan Dela Cruz ",
@@ -27,6 +29,8 @@ const draft = (over: Partial<RiderApplicationDraft> = {}): RiderApplicationDraft
   vehicle_type: "motorcycle",
   vehicle_plate_number: "ABC 1234",
   license_photo: photo,
+  nbi_clearance_photo: nbi,
+  selfie_photo: selfie,
   ...over,
 });
 
@@ -49,7 +53,7 @@ beforeEach(() => {
 });
 
 describe("rider application", () => {
-  it("sends every contract field and the licence photo as a file part", async () => {
+  it("sends every contract field and the three photos as file parts", async () => {
     expect(await send(draft())).toEqual([
       ["name", "Juan Dela Cruz"],
       ["email", "juan@example.com"],
@@ -58,6 +62,8 @@ describe("rider application", () => {
       ["vehicle_type", "motorcycle"],
       ["vehicle_plate_number", "ABC 1234"],
       ["license_photo", { uri: photo.uri, name: photo.name, type: photo.type }],
+      ["nbi_clearance_photo", { uri: nbi.uri, name: nbi.name, type: nbi.type }],
+      ["selfie_photo", { uri: selfie.uri, name: selfie.name, type: selfie.type }],
     ]);
   });
 
@@ -75,11 +81,23 @@ describe("rider application", () => {
       vehicle_type: null,
       vehicle_plate_number: "",
       license_photo: null,
+      nbi_clearance_photo: null,
+      selfie_photo: null,
     });
     expect(check.ok).toBe(false);
     if (check.ok) return;
     expect(Object.keys(check.errors).sort()).toEqual(
-      ["email", "license_photo", "name", "password", "phone_number", "vehicle_type", "vehicle_plate_number"].sort(),
+      [
+        "email",
+        "license_photo",
+        "name",
+        "nbi_clearance_photo",
+        "password",
+        "phone_number",
+        "selfie_photo",
+        "vehicle_type",
+        "vehicle_plate_number",
+      ].sort(),
     );
   });
 
@@ -90,6 +108,8 @@ describe("rider application", () => {
     ["a phone over 20 characters", { phone_number: "0".repeat(21) }, "phone_number"],
     ["a HEIC photo", { license_photo: { ...photo, type: "image/heic" } }, "license_photo"],
     ["a photo over 5 MB", { license_photo: { ...photo, size: 5 * 1024 * 1024 + 1 } }, "license_photo"],
+    ["no NBI clearance", { nbi_clearance_photo: null }, "nbi_clearance_photo"],
+    ["a HEIC selfie", { selfie_photo: { ...selfie, type: "image/heic" } }, "selfie_photo"],
   ])("rejects %s", (_name, over, field) => {
     const check = checkRiderApplication(draft(over));
     expect(check.ok).toBe(false);

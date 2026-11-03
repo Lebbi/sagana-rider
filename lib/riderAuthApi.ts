@@ -49,12 +49,22 @@ export async function riderLogin(
   return data;
 }
 
-export interface LicensePhoto {
+export interface ApplicationPhoto {
   uri: string;
   name: string;
   type: string;
   size?: number;
 }
+
+/** Each is sent as a file part of the same name and opened by the owner in /admin Riders. */
+export const APPLICATION_PHOTOS = ["license_photo", "nbi_clearance_photo", "selfie_photo"] as const;
+export type ApplicationPhotoField = (typeof APPLICATION_PHOTOS)[number];
+
+const PHOTO_REQUIRED: Record<ApplicationPhotoField, TextKey> = {
+  license_photo: "register.photoRequired",
+  nbi_clearance_photo: "register.nbiRequired",
+  selfie_photo: "register.selfieRequired",
+};
 
 /** What the sign-up screen holds while the applicant types. */
 export interface RiderApplicationDraft {
@@ -64,16 +74,17 @@ export interface RiderApplicationDraft {
   phone_number: string;
   vehicle_type: VehicleType | null;
   vehicle_plate_number: string;
-  license_photo: LicensePhoto | null;
+  license_photo: ApplicationPhoto | null;
+  nbi_clearance_photo: ApplicationPhoto | null;
+  selfie_photo: ApplicationPhoto | null;
 }
 
 export type RiderApplicationField = keyof RiderApplicationDraft;
 
 /** A draft that passed the client checks; only this can be sent. */
-export type RiderApplication = Omit<RiderApplicationDraft, "vehicle_type" | "license_photo"> & {
+export type RiderApplication = Omit<RiderApplicationDraft, "vehicle_type" | ApplicationPhotoField> & {
   vehicle_type: VehicleType;
-  license_photo: LicensePhoto;
-};
+} & Record<ApplicationPhotoField, ApplicationPhoto>;
 
 export type RiderApplicationCheck =
   | { ok: true; application: RiderApplication }
@@ -91,7 +102,6 @@ export function checkRiderApplication(draft: RiderApplicationDraft): RiderApplic
   const password = draft.password.trim();
   const phone = draft.phone_number.trim();
   const plate = needsPlate(draft.vehicle_type) ? draft.vehicle_plate_number.trim() : "";
-  const photo = draft.license_photo;
   const errors: Partial<Record<RiderApplicationField, TextKey>> = {};
 
   if (!name) errors.name = "register.nameRequired";
@@ -103,11 +113,16 @@ export function checkRiderApplication(draft: RiderApplicationDraft): RiderApplic
   if (!draft.vehicle_type) errors.vehicle_type = "register.vehicleRequired";
   if (needsPlate(draft.vehicle_type) && !plate) errors.vehicle_plate_number = "register.plateRequired";
   else if (plate.length > 20) errors.vehicle_plate_number = "register.plateLong";
-  if (!photo) errors.license_photo = "register.photoRequired";
-  else if (!PHOTO_TYPES.includes(photo.type)) errors.license_photo = "register.photoType";
-  else if ((photo.size ?? 0) > PHOTO_MAX_BYTES) errors.license_photo = "register.photoLarge";
+  const photos = {} as Record<ApplicationPhotoField, ApplicationPhoto>;
+  for (const field of APPLICATION_PHOTOS) {
+    const photo = draft[field];
+    if (!photo) errors[field] = PHOTO_REQUIRED[field];
+    else if (!PHOTO_TYPES.includes(photo.type)) errors[field] = "register.photoType";
+    else if ((photo.size ?? 0) > PHOTO_MAX_BYTES) errors[field] = "register.photoLarge";
+    else photos[field] = photo;
+  }
 
-  if (Object.keys(errors).length > 0 || !draft.vehicle_type || !photo) {
+  if (Object.keys(errors).length > 0 || !draft.vehicle_type) {
     return { ok: false, errors };
   }
   return {
@@ -119,7 +134,7 @@ export function checkRiderApplication(draft: RiderApplicationDraft): RiderApplic
       phone_number: phone,
       vehicle_type: draft.vehicle_type,
       vehicle_plate_number: plate,
-      license_photo: photo,
+      ...photos,
     },
   };
 }
@@ -135,8 +150,10 @@ export async function riderRegister(application: RiderApplication): Promise<void
   if (needsPlate(application.vehicle_type)) {
     form.append("vehicle_plate_number", application.vehicle_plate_number);
   }
-  const { uri, name, type } = application.license_photo;
-  // React Native's FormData uploads a { uri, name, type } object as a file part.
-  form.append("license_photo", { uri, name, type } as unknown as Blob);
+  for (const field of APPLICATION_PHOTOS) {
+    const { uri, name, type } = application[field];
+    // React Native's FormData uploads a { uri, name, type } object as a file part.
+    form.append(field, { uri, name, type } as unknown as Blob);
+  }
   await api.post("/rider/register", form);
 }
