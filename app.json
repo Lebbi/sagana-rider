@@ -4,7 +4,7 @@
     "slug": "sagana-rider",
     "version": "1.0.0",
     "orientation": "default",
-    "icon": "./assets/branding/official_sagana_logo.png",
+    "icon": "./assets/branding/rider-app-icon.png",
     "scheme": "saganarider",
     "userInterfaceStyle": "light",
     "ios": {
@@ -23,8 +23,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/branding/official_sagana_logo.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/branding/rider-app-icon-adaptive.png",
+        "backgroundColor": "#087434"
       },
       "package": "com.sagana.rider",
       "versionCode": 1,
