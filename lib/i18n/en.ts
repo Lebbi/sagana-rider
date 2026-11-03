@@ -160,6 +160,7 @@ export const en = {
   "delivery.cancelA11y": "Cancel delivery",
   "delivery.messagesUnavailable": "Messages unavailable",
   "delivery.recenter": "Recenter map",
+  "delivery.northUp": "Turn the map north up",
   "delivery.callA11y": "Call {name}",
   "delivery.noPhone": "No phone number on file for this contact.",
   "delivery.callFailed": "Could not open the phone dialer.",

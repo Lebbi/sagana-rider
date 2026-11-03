@@ -162,6 +162,7 @@ export const tl: Translation = {
   "delivery.cancelA11y": "I-cancel ang delivery",
   "delivery.messagesUnavailable": "Hindi available ang messages",
   "delivery.recenter": "I-center ulit ang mapa",
+  "delivery.northUp": "Ibalik ang hilaga sa itaas ng mapa",
   "delivery.callA11y": "Tawagan si {name}",
   "delivery.noPhone": "Walang numero ng telepono para sa contact na ito.",
   "delivery.callFailed": "Hindi mabuksan ang dialer ng telepono.",

@@ -30,6 +30,7 @@ import {
 import ETABadge from "@/features/riders/presentation/components/ETABadge";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
+import { useCameraHeading } from "@/features/riders/presentation/hooks/useCameraHeading";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import { cancelOrder, getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
@@ -139,7 +140,7 @@ export default function ActiveDeliveryPage() {
   const hasCompletedPhaseOneRef = useRef(false);
   const orderRef = useRef<RiderOrder | null>(null);
   const [voiceMuted, setVoiceMuted] = useState(false);
-  const [followRider, setFollowRider] = useState(false);
+  const [camera, setCamera] = useState<"route" | "follow" | "heading-up">("route");
 
   useEffect(() => {
     AsyncStorage.getItem(VOICE_MUTED_KEY)
@@ -294,6 +295,11 @@ export default function ActiveDeliveryPage() {
     destination: destination ?? DEFAULT_MAP_CENTER,
     destinationType: activePhase === 1 ? "pickup" : "delivery",
   });
+  const cameraHeading = useCameraHeading(
+    camera === "heading-up",
+    nav.riderHeading,
+    nav.riderSpeed,
+  );
 
   // Start GPS tracking + route fetching only after the order loads
   // (destination is null until getRiderOrderById succeeds). Starting
@@ -778,8 +784,9 @@ export default function ActiveDeliveryPage() {
             destinationType={activePhase === 1 ? "pickup" : "delivery"}
             extraStops={farmerStop}
             isDarkMode={isDarkMode}
-            followRider={followRider}
-            onUserPan={() => setFollowRider(false)}
+            followRider={camera !== "route"}
+            heading={cameraHeading}
+            onUserPan={() => setCamera("route")}
           />
           </View>
 
@@ -892,11 +899,15 @@ export default function ActiveDeliveryPage() {
             <Pressable
               style={styles.mapControlButton}
               onPress={() => {
-                setFollowRider(true);
+                if (camera === "heading-up") {
+                  setCamera("follow");
+                  return;
+                }
+                setCamera("heading-up");
                 if (nav.isOffRoute) nav.reroute();
               }}
               accessibilityRole="button"
-              accessibilityLabel={t("delivery.recenter")}
+              accessibilityLabel={t(camera === "heading-up" ? "delivery.northUp" : "delivery.recenter")}
             >
               <MaterialIcons
                 name={IconTheme.compass}

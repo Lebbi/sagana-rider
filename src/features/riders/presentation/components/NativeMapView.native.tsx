@@ -51,6 +51,8 @@ interface NativeMapViewProps {
   areaPins?: GeoPoint[];
   /** Keep the camera on the rider instead of fitting the whole route. */
   followRider?: boolean;
+  /** With followRider, turn the map to this heading and tilt it, like turn-by-turn navigation. */
+  heading?: number | null;
   /** Called when the rider drags the map, so the screen can stop following. */
   onUserPan?: () => void;
 }
@@ -95,6 +97,7 @@ export default function NativeMapView({
   extraStops,
   areaPins,
   followRider,
+  heading,
   onUserPan,
 }: NativeMapViewProps) {
   const mapCenter =
@@ -131,6 +134,7 @@ export default function NativeMapView({
       extraStops={extraStops}
       areaPins={areaPins}
       followRider={followRider}
+      heading={heading}
       onUserPan={onUserPan}
     />
   );
@@ -301,6 +305,7 @@ function NativeMap({
   extraStops,
   areaPins,
   followRider,
+  heading,
   onUserPan,
 }: NativeMapViewProps) {
   const mapRef = useRef<MapView>(null);
@@ -308,6 +313,8 @@ function NativeMap({
   const t = useT();
   const [isLoading, setIsLoading] = useState(true);
   const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
+  const headingUp = !!followRider && heading != null;
+  const turnedRef = useRef(false);
 
   const region = {
     latitude: mapCenter.latitude,
@@ -323,11 +330,19 @@ function NativeMap({
     if (!mapRef.current) return;
 
     if (followRider && riderLocation) {
+      turnedRef.current = headingUp;
       mapRef.current.animateCamera(
-        { center: riderLocation, zoom: 17 },
+        headingUp
+          ? { center: riderLocation, zoom: 18, heading: heading ?? 0, pitch: 50 }
+          : { center: riderLocation, zoom: 17, heading: 0, pitch: 0 },
         { duration: 500 },
       );
       return;
+    }
+
+    if (turnedRef.current) {
+      turnedRef.current = false;
+      mapRef.current.setCamera({ heading: 0, pitch: 0 });
     }
 
     const points: GeoPoint[] = [];
@@ -358,7 +373,7 @@ function NativeMap({
       },
       500,
     );
-  }, [route, riderLocation, destination, extraStops, mapCenter, followRider]);
+  }, [route, riderLocation, destination, extraStops, mapCenter, followRider, heading, headingUp]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -387,7 +402,7 @@ function NativeMap({
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}
-        pitchEnabled={false}
+        pitchEnabled={headingUp}
       >
         {/* Destination marker */}
         {destination && (

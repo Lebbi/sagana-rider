@@ -28,6 +28,8 @@ export interface UseRiderNavigationReturn {
   // GPS
   riderLocation: GeoPoint | null;
   riderHeading: number | null;
+  /** Metres per second from GPS, null when the phone gives none. */
+  riderSpeed: number | null;
   gpsAccuracy: number | null;
   gpsPermissionGranted: boolean;
   locationStatus: "idle" | "requesting" | "granted" | "denied" | "failed";
@@ -69,6 +71,7 @@ export function useRiderNavigation(
 
   const [riderLocation, setRiderLocation] = useState<GeoPoint | null>(null);
   const [riderHeading, setRiderHeading] = useState<number | null>(null);
+  const [riderSpeed, setRiderSpeed] = useState<number | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsPermissionGranted, setGpsPermissionGranted] = useState(false);
   const [locationStatus, setLocationStatus] = useState<
@@ -168,6 +171,7 @@ export function useRiderNavigation(
 
       setRiderLocation(initialLocation);
       setRiderHeading(initialPos.coords.heading ?? null);
+      setRiderSpeed(initialPos.coords.speed ?? null);
       setGpsAccuracy(initialPos.coords.accuracy ?? null);
       setLocationStatus("granted");
 
@@ -203,6 +207,7 @@ export function useRiderNavigation(
 
           setRiderLocation(newLocation);
           setRiderHeading(location.coords.heading ?? null);
+          setRiderSpeed(location.coords.speed ?? null);
           setGpsAccuracy(location.coords.accuracy ?? null);
 
           // Flush a deferred phase-switch reroute once, then clear it.
@@ -336,6 +341,7 @@ export function useRiderNavigation(
   return {
     riderLocation,
     riderHeading,
+    riderSpeed,
     gpsAccuracy,
     gpsPermissionGranted,
     locationStatus,

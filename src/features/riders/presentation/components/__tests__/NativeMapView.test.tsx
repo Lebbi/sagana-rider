@@ -4,6 +4,7 @@ import type { ReactTestRenderer } from "react-test-renderer";
 let mockMapsKey = "";
 const mockAnimateCamera = jest.fn();
 const mockFitToCoordinates = jest.fn();
+const mockSetCamera = jest.fn();
 
 jest.mock("expo-constants", () => ({
   __esModule: true,
@@ -21,6 +22,7 @@ jest.mock("react-native-maps", () => {
         fitToCoordinates: mockFitToCoordinates,
         animateToRegion: () => {},
         animateCamera: mockAnimateCamera,
+        setCamera: mockSetCamera,
       }));
       return children;
     },
@@ -51,27 +53,30 @@ const farmer = { latitude: 15.03, longitude: 120.69 };
 const buyer = { latitude: 15.05, longitude: 120.7 };
 
 // The map picks Google Maps or tiles when its module loads, so each case loads a fresh copy.
-function renderMap(props: Record<string, unknown> = {}): ReactTestRenderer {
+function renderMap(props: Record<string, unknown> = {}) {
   let tree!: ReactTestRenderer;
+  let rerender!: (next: Record<string, unknown>) => void;
   jest.isolateModules(() => {
     const { act, create } = require("react-test-renderer");
     const NativeMapView = require("../NativeMapView").default;
+    const el = (p: Record<string, unknown>) => (
+      <NativeMapView
+        route={null}
+        riderLocation={null}
+        riderHeading={null}
+        destination={buyer}
+        destinationType="delivery"
+        extraStops={[{ point: farmer, type: "pickup" }]}
+        isDarkMode={false}
+        {...p}
+      />
+    );
     act(() => {
-      tree = create(
-        <NativeMapView
-          route={null}
-          riderLocation={null}
-          riderHeading={null}
-          destination={buyer}
-          destinationType="delivery"
-          extraStops={[{ point: farmer, type: "pickup" }]}
-          isDarkMode={false}
-          {...props}
-        />,
-      );
+      tree = create(el(props));
     });
+    rerender = (next) => act(() => tree.update(el(next)));
   });
-  return tree;
+  return Object.assign(tree, { rerender });
 }
 
 const pinIcons = (tree: ReactTestRenderer) =>
@@ -123,7 +128,7 @@ describe("NativeMapView on a phone", () => {
     mockFitToCoordinates.mockClear();
     renderMap({ riderLocation: rider, followRider: true });
     expect(mockAnimateCamera).toHaveBeenCalledWith(
-      { center: rider, zoom: 17 },
+      { center: rider, zoom: 17, heading: 0, pitch: 0 },
       { duration: 500 },
     );
     expect(mockFitToCoordinates).not.toHaveBeenCalled();
@@ -132,5 +137,20 @@ describe("NativeMapView on a phone", () => {
     renderMap({ riderLocation: rider });
     expect(mockAnimateCamera).not.toHaveBeenCalled();
     expect(mockFitToCoordinates).toHaveBeenCalled();
+  });
+
+  it("turns and tilts the map to the rider's heading, and goes back to north up for the route", () => {
+    mockMapsKey = "key";
+    const rider = { latitude: 15.04, longitude: 120.695 };
+    mockAnimateCamera.mockClear();
+    mockSetCamera.mockClear();
+    const map = renderMap({ riderLocation: rider, followRider: true, heading: 90 });
+    expect(mockAnimateCamera).toHaveBeenLastCalledWith(
+      { center: rider, zoom: 18, heading: 90, pitch: 50 },
+      { duration: 500 },
+    );
+
+    map.rerender({ riderLocation: rider, followRider: false, heading: null });
+    expect(mockSetCamera).toHaveBeenCalledWith({ heading: 0, pitch: 0 });
   });
 });
