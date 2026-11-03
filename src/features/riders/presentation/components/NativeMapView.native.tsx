@@ -49,6 +49,10 @@ interface NativeMapViewProps {
   extraStops?: MapStop[];
   /** Pins drawn only while inside the visible map area; they never move the camera. */
   areaPins?: GeoPoint[];
+  /** Keep the camera on the rider instead of fitting the whole route. */
+  followRider?: boolean;
+  /** Called when the rider drags the map, so the screen can stop following. */
+  onUserPan?: () => void;
 }
 
 type MapStop = { point: GeoPoint; type: "pickup" | "delivery" };
@@ -90,8 +94,11 @@ export default function NativeMapView({
   onMapReady,
   extraStops,
   areaPins,
+  followRider,
+  onUserPan,
 }: NativeMapViewProps) {
-  const mapCenter = center ?? destination ?? DEFAULT_MAP_CENTER;
+  const mapCenter =
+    (followRider ? riderLocation : null) ?? center ?? destination ?? DEFAULT_MAP_CENTER;
 
   // ── No Google Maps API key: tile grid fallback ────────────────
   if (!USE_NATIVE_MAP) {
@@ -123,6 +130,8 @@ export default function NativeMapView({
       onMapReady={onMapReady}
       extraStops={extraStops}
       areaPins={areaPins}
+      followRider={followRider}
+      onUserPan={onUserPan}
     />
   );
 }
@@ -291,6 +300,8 @@ function NativeMap({
   onMapReady,
   extraStops,
   areaPins,
+  followRider,
+  onUserPan,
 }: NativeMapViewProps) {
   const mapRef = useRef<MapView>(null);
   const colors = useColors();
@@ -310,6 +321,14 @@ function NativeMap({
   // Fit map to show route + rider + destination
   useEffect(() => {
     if (!mapRef.current) return;
+
+    if (followRider && riderLocation) {
+      mapRef.current.animateCamera(
+        { center: riderLocation, zoom: 17 },
+        { duration: 500 },
+      );
+      return;
+    }
 
     const points: GeoPoint[] = [];
     if (destination) points.push(destination);
@@ -339,7 +358,7 @@ function NativeMap({
       },
       500,
     );
-  }, [route, riderLocation, destination, extraStops, mapCenter]);
+  }, [route, riderLocation, destination, extraStops, mapCenter, followRider]);
 
   const handleMapReady = useCallback(() => {
     setIsLoading(false);
@@ -364,6 +383,7 @@ function NativeMap({
         userInterfaceStyle={isDarkMode ? "dark" : "light"}
         onMapReady={handleMapReady}
         onRegionChangeComplete={setVisibleRegion}
+        onPanDrag={onUserPan}
         rotateEnabled={true}
         scrollEnabled={true}
         zoomEnabled={true}

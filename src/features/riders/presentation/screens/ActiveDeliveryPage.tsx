@@ -1,4 +1,5 @@
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -51,6 +52,7 @@ const removePhotoStyle = {
 };
 
 const DRAG_DISMISS_THRESHOLD = 64;
+const VOICE_MUTED_KEY = "sagana.voiceMuted";
 const PEEK_HEIGHT_GUESS = 260;
 
 const CANCEL_REASONS: { value: CancelReason; label: TextKey }[] = [
@@ -136,6 +138,21 @@ export default function ActiveDeliveryPage() {
   const [selectedCancelReason, setSelectedCancelReason] = useState<CancelReason | "">("");
   const hasCompletedPhaseOneRef = useRef(false);
   const orderRef = useRef<RiderOrder | null>(null);
+  const [voiceMuted, setVoiceMuted] = useState(false);
+  const [followRider, setFollowRider] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(VOICE_MUTED_KEY)
+      .then((v) => setVoiceMuted(v === "1"))
+      .catch(() => {});
+  }, []);
+
+  const toggleVoice = useCallback(() => {
+    setVoiceMuted((was) => {
+      AsyncStorage.setItem(VOICE_MUTED_KEY, was ? "0" : "1").catch(() => {});
+      return !was;
+    });
+  }, []);
 
   // Proof photos: base64 strings sent to backend on status update.
   // Pickup photo is required before the checklist auto-completes.
@@ -761,6 +778,8 @@ export default function ActiveDeliveryPage() {
             destinationType={activePhase === 1 ? "pickup" : "delivery"}
             extraStops={farmerStop}
             isDarkMode={isDarkMode}
+            followRider={followRider}
+            onUserPan={() => setFollowRider(false)}
           />
           </View>
 
@@ -780,6 +799,7 @@ export default function ActiveDeliveryPage() {
               nextStep={nav.nextStep}
               distanceToNextStep={nav.distanceToNextStep}
               etaMinutes={nav.etaMinutes}
+              muted={voiceMuted}
             />
           </View>
 
@@ -817,7 +837,21 @@ export default function ActiveDeliveryPage() {
                   />
                 </Pressable>
               )}
-              <Pressable style={styles.headerActionButton}>
+              <Pressable
+                style={styles.headerActionButton}
+                onPress={() => {
+                  const number = headerNumber.replace(/[^\d+]/g, "");
+                  if (!number) {
+                    showSaganaToast({ type: "info", text1: t("delivery.noPhone") });
+                    return;
+                  }
+                  Linking.openURL(`tel:${number}`).catch(() =>
+                    showSaganaToast({ type: "error", text1: t("delivery.callFailed") }),
+                  );
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t("delivery.callA11y", { name: headerName })}
+              >
                 <MaterialIcons
                   name={IconTheme.phone}
                   size={21}
@@ -843,16 +877,24 @@ export default function ActiveDeliveryPage() {
           </View>
 
           <View style={styles.mapRightControls}>
-            <Pressable style={styles.mapControlButton}>
+            <Pressable
+              style={styles.mapControlButton}
+              onPress={toggleVoice}
+              accessibilityRole="button"
+              accessibilityLabel={t(voiceMuted ? "delivery.unmuteVoice" : "delivery.muteVoice")}
+            >
               <MaterialIcons
-                name={IconTheme.volumeUp as any}
+                name={(voiceMuted ? IconTheme.volumeOff : IconTheme.volumeUp) as any}
                 size={28}
                 color="#FFFFFF"
               />
             </Pressable>
             <Pressable
               style={styles.mapControlButton}
-              onPress={nav.reroute}
+              onPress={() => {
+                setFollowRider(true);
+                if (nav.isOffRoute) nav.reroute();
+              }}
               accessibilityRole="button"
               accessibilityLabel={t("delivery.recenter")}
             >

@@ -40,6 +40,8 @@ export interface UseRiderNavigationReturn {
   etaMinutes: number;
   isRerouting: boolean;
   isLoadingRoute: boolean;
+  /** No route yet, or the rider is farther than the reroute threshold from it. */
+  isOffRoute: boolean;
 
   // Actions
   startNavigation: () => void;
@@ -326,6 +328,10 @@ export function useRiderNavigation(
   const etaMinutes = route
     ? Math.max(0, Math.ceil(route.totalDuration / 60))
     : 0;
+  const isOffRoute =
+    !route?.polyline?.length ||
+    (!!riderLocation &&
+      distanceToPolyline(riderLocation, route.polyline) > REROUTE_THRESHOLD);
 
   return {
     riderLocation,
@@ -340,6 +346,7 @@ export function useRiderNavigation(
     etaMinutes,
     isRerouting,
     isLoadingRoute,
+    isOffRoute,
     startNavigation,
     stopNavigation,
     reroute,

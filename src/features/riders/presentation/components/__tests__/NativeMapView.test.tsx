@@ -2,6 +2,8 @@ import { describe, expect, it, jest } from "@jest/globals";
 import type { ReactTestRenderer } from "react-test-renderer";
 
 let mockMapsKey = "";
+const mockAnimateCamera = jest.fn();
+const mockFitToCoordinates = jest.fn();
 
 jest.mock("expo-constants", () => ({
   __esModule: true,
@@ -16,8 +18,9 @@ jest.mock("react-native-maps", () => {
   const MapView = R.forwardRef(
     ({ children }: { children: unknown }, ref: unknown) => {
       R.useImperativeHandle(ref, () => ({
-        fitToCoordinates: () => {},
+        fitToCoordinates: mockFitToCoordinates,
         animateToRegion: () => {},
+        animateCamera: mockAnimateCamera,
       }));
       return children;
     },
@@ -111,5 +114,23 @@ describe("NativeMapView on a phone", () => {
       areaPins: [nearOrder, farOrder],
     });
     expect(pinIcons(tree)).toEqual(["home", "warehouse"]);
+  });
+
+  it("follows the rider when asked, and fits the route otherwise", () => {
+    mockMapsKey = "key";
+    const rider = { latitude: 15.04, longitude: 120.695 };
+    mockAnimateCamera.mockClear();
+    mockFitToCoordinates.mockClear();
+    renderMap({ riderLocation: rider, followRider: true });
+    expect(mockAnimateCamera).toHaveBeenCalledWith(
+      { center: rider, zoom: 17 },
+      { duration: 500 },
+    );
+    expect(mockFitToCoordinates).not.toHaveBeenCalled();
+
+    mockAnimateCamera.mockClear();
+    renderMap({ riderLocation: rider });
+    expect(mockAnimateCamera).not.toHaveBeenCalled();
+    expect(mockFitToCoordinates).toHaveBeenCalled();
   });
 });

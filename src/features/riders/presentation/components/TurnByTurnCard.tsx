@@ -27,6 +27,8 @@ export interface TurnByTurnCardProps {
   distanceToNextStep: number;
   /** Current ETA in minutes. */
   etaMinutes: number;
+  /** Rider turned the voice off with the volume button. */
+  muted?: boolean;
 }
 
 // ============================================================
@@ -58,6 +60,7 @@ export default function TurnByTurnCard({
   nextStep,
   distanceToNextStep,
   etaMinutes,
+  muted = false,
 }: TurnByTurnCardProps) {
   const colors = useColors();
   const t = useT();
@@ -99,10 +102,14 @@ export default function TurnByTurnCard({
     lastSpokenStepRef.current = stepKey;
 
     // Don't speak on depart (too early)
-    if (currentStep.maneuver === "depart") return;
+    if (currentStep.maneuver === "depart" || muted) return;
 
     speakInstruction(currentStep.instruction);
-  }, [currentStep, speakInstruction]);
+  }, [currentStep, speakInstruction, muted]);
+
+  useEffect(() => {
+    if (muted) Speech.stop();
+  }, [muted]);
 
   // Haptic when approaching turn (< 100m)
   useEffect(() => {
