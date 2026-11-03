@@ -38,6 +38,7 @@ import { useUser } from "@/context/UserContext";
 import { setAuthToken } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { riderLogin } from "@/lib/riderAuthApi";
+import { getErrorMessage } from "@/utils/errorHandler";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -159,7 +160,10 @@ export default function RiderLoginScreen() {
 
       if (err?.response?.status === 403) {
         const code = err.response.data?.error ?? "";
-        if (code === "NOT_A_RIDER") {
+        if (code === "ACCOUNT_SUSPENDED") {
+          const suspended = getErrorMessage(err);
+          errorMsg = `${suspended.title}. ${suspended.message}`;
+        } else if (code === "NOT_A_RIDER") {
           errorMsg = t("login.notRider");
         } else if (code === "RIDER_SUSPENDED") {
           errorMsg = t("login.suspended");

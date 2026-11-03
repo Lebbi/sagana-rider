@@ -18,6 +18,14 @@ export const getErrorMessage = (error: any): { title: string; message: string } 
   const status = error.response?.status;
   const serverMessage = error.response?.data?.message;
 
+  if (error.response?.data?.error === 'ACCOUNT_SUSPENDED') {
+    const reason = error.response.data.reason;
+    return {
+      title: t("errors.suspendedTitle"),
+      message: reason ? t("errors.suspendedReason", { reason }) : t("errors.suspended"),
+    };
+  }
+
   // HTTP status code based errors
   switch (status) {
     case 400:
@@ -88,7 +96,10 @@ export const handleApiError = (error: any, customMessage?: string) => {
   Toast.show({
     type: 'error',
     text1: errorMsg.title,
-    text2: customMessage || errorMsg.message,
+    // A suspension's reason matters more than the screen's own failure text.
+    text2: error?.response?.data?.error === 'ACCOUNT_SUSPENDED'
+      ? errorMsg.message
+      : customMessage || errorMsg.message,
     visibilityTime: 4000,
   });
 };
