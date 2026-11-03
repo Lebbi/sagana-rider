@@ -5,6 +5,7 @@
  * POST /api/rider/login endpoint:
  *   - 200 → rider home
  *   - 403 NOT_A_RIDER → "not registered as a rider" message
+ *   - 403 RIDER_PENDING → application pending screen
  *   - 403 RIDER_SUSPENDED / RIDER_INACTIVE / RIDER_BLOCKED → account status message
  *   - 401 → invalid credentials
  */
@@ -12,7 +13,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Redirect, useRouter } from "expo-router";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,15 +22,16 @@ import {
   ScrollView,
   StatusBar,
   StyleSheet,
-  Text,
-  TextInput,
-  type TextProps,
-  type TextInputProps,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { AuthCornerOrnaments } from "@/components/auth/BuyerAuthUi";
+import {
+  AuthCornerOrnaments,
+  AuthField,
+  LoginText,
+  LoginTextInput,
+} from "@/components/auth/BuyerAuthUi";
 import { SaganaPressable } from "@/components/ui/SaganaPressable";
 import { BrandAssets } from "@/constants/BrandAssets";
 import { buyerLoginDesign as d, manrope } from "@/constants/buyerLoginDesign";
@@ -41,45 +43,6 @@ import { riderLogin } from "@/lib/riderAuthApi";
 import { getErrorMessage } from "@/utils/errorHandler";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-function LoginText({ style, ...rest }: TextProps) {
-  return <Text style={[styles.manropeBase, style]} {...rest} />;
-}
-
-function LoginTextInput({ style, ...rest }: TextInputProps) {
-  return (
-    <TextInput
-      style={[styles.textInput, style]}
-      placeholderTextColor={d.forgotLink}
-      {...rest}
-    />
-  );
-}
-
-function AuthField({
-  label,
-  required,
-  error,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <View style={styles.fieldBlock}>
-      <LoginText style={styles.fieldLabel}>
-        {label}
-        {required ? (
-          <LoginText style={styles.requiredMark}> *</LoginText>
-        ) : null}
-      </LoginText>
-      {children}
-      {error ? <LoginText style={styles.fieldError}>{error}</LoginText> : null}
-    </View>
-  );
-}
 
 export default function RiderLoginScreen() {
   const router = useRouter();
@@ -160,6 +123,10 @@ export default function RiderLoginScreen() {
 
       if (err?.response?.status === 403) {
         const code = err.response.data?.error ?? "";
+        if (code === "RIDER_PENDING") {
+          router.replace("/pending");
+          return;
+        }
         if (code === "ACCOUNT_SUSPENDED") {
           const suspended = getErrorMessage(err);
           errorMsg = `${suspended.title}. ${suspended.message}`;
@@ -288,6 +255,15 @@ export default function RiderLoginScreen() {
                 )}
               </SaganaPressable>
 
+              <SaganaPressable
+                style={styles.applyLink}
+                onPress={() => router.push("/register")}
+                disabled={loading}
+                accessibilityRole="link"
+              >
+                <LoginText style={styles.applyLinkText}>{t("login.apply")}</LoginText>
+              </SaganaPressable>
+
               <LoginText style={styles.footerNote}>
                 {t("login.footer")}
               </LoginText>
@@ -300,9 +276,6 @@ export default function RiderLoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  manropeBase: {
-    fontFamily: manrope.regular,
-  },
   screen: {
     flex: 1,
     backgroundColor: d.screenBg,
@@ -355,30 +328,6 @@ const styles = StyleSheet.create({
   form: {
     width: "100%",
   },
-  fieldBlock: {
-    marginBottom: d.fieldGap,
-  },
-  fieldLabel: {
-    fontFamily: manrope.bold,
-    fontSize: d.labelSize,
-    color: d.primary,
-    marginBottom: d.labelToInput,
-  },
-  requiredMark: {
-    color: d.required,
-    fontFamily: manrope.bold,
-  },
-  textInput: {
-    height: d.controlHeight,
-    backgroundColor: d.inputBg,
-    borderWidth: 1,
-    borderColor: d.inputBorder,
-    borderRadius: d.radius,
-    paddingHorizontal: 14,
-    fontFamily: manrope.medium,
-    fontSize: d.bodySize,
-    color: d.primary,
-  },
   textInputWithIcon: {
     paddingRight: 42,
   },
@@ -420,11 +369,16 @@ const styles = StyleSheet.create({
     fontSize: d.buttonTextSize,
     color: "#FFFFFF",
   },
-  fieldError: {
-    fontFamily: manrope.regular,
-    fontSize: 12,
-    color: d.required,
-    marginTop: 6,
+  applyLink: {
+    alignItems: "center",
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  applyLinkText: {
+    fontFamily: manrope.bold,
+    fontSize: d.bodySize,
+    color: d.primary,
+    textDecorationLine: "underline",
   },
   footerNote: {
     fontFamily: manrope.regular,
