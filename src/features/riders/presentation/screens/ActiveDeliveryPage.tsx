@@ -867,17 +867,19 @@ export default function ActiveDeliveryPage() {
               </Pressable>
               <Pressable
                 style={styles.headerActionButton}
-                onPress={() => {
-                  // In-app chat with farmer/buyer is not available in the
-                  // rider app v1 — the phone button above is the contact path.
-                }}
+                onPress={() =>
+                  router.push({
+                    pathname: "/tabs/DeliveryChatPage",
+                    params: { orderId: String(order.orderId), with: isPhaseOne ? "farmer" : "buyer" },
+                  } as never)
+                }
                 accessibilityRole="button"
-                accessibilityLabel={t("delivery.messagesUnavailable")}
+                accessibilityLabel={t("delivery.messageA11y", { name: headerName })}
               >
                 <MaterialIcons
                   name={IconTheme.message}
                   size={20}
-                  color="#C4C4C4"
+                  color="#087434"
                 />
               </Pressable>
             </View>

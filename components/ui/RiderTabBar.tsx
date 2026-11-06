@@ -36,7 +36,11 @@ const RIDER_TABS: TabItem[] = [
 ];
 
 // Screens where the tab bar is hidden (focused delivery modes)
-const HIDDEN_ROUTES = new Set(["ActiveDeliveryPage", "PasabayNavigationScreen"]);
+const HIDDEN_ROUTES = new Set([
+  "ActiveDeliveryPage",
+  "PasabayNavigationScreen",
+  "DeliveryChatPage",
+]);
 
 interface RiderTabBarProps {
   state: {
