@@ -27,12 +27,16 @@ function getNotifications() {
 /** Call once at startup so alerts show while the app is open. */
 export function configureNotifications() {
   getNotifications()?.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
+    // A push with no title is an in-app signal (a call ending), never a banner.
+    handleNotification: async (notification) => {
+      const show = Boolean(notification.request.content.title);
+      return {
+        shouldPlaySound: show,
+        shouldSetBadge: false,
+        shouldShowBanner: show,
+        shouldShowList: show,
+      };
+    },
   });
 }
 
@@ -103,5 +107,15 @@ export function listenForPushTaps(open: (data: PushData) => void): () => void {
   const last = N.getLastNotificationResponse();
   if (last) onResponse(last);
   const subscription = N.addNotificationResponseReceivedListener(onResponse);
+  return () => subscription.remove();
+}
+
+/** Every push that arrives while the app is open, including data-only ones. */
+export function listenForPushData(onData: (data: PushData) => void): () => void {
+  const N = getNotifications();
+  if (!N) return () => {};
+  const subscription = N.addNotificationReceivedListener((notification) =>
+    onData((notification.request.content.data ?? {}) as PushData),
+  );
   return () => subscription.remove();
 }

@@ -13,7 +13,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "Sagana Rider uses your location to navigate to farmer pickups and buyer deliveries.",
-        "NSCameraUsageDescription": "Sagana Rider uses the camera to take proof-of-pickup and delivery photos."
+        "NSCameraUsageDescription": "Sagana Rider uses the camera to take proof-of-pickup and delivery photos.",
+        "NSMicrophoneUsageDescription": "Sagana Rider uses the microphone for in-app calls with farmers and buyers during a delivery."
       }
     },
     "androidStatusBar": {

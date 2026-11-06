@@ -28,6 +28,7 @@ import {
   getSheetStops,
 } from "@/features/riders/presentation/utils/sheetStops";
 import ETABadge from "@/features/riders/presentation/components/ETABadge";
+import InAppCallModal from "@/features/riders/presentation/components/InAppCallModal";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useCameraHeading } from "@/features/riders/presentation/hooks/useCameraHeading";
@@ -121,6 +122,18 @@ function MapPinNote() {
   );
 }
 
+/** RID-35 dialer, kept as the backup to in-app calls. */
+function openDialer(phone: string) {
+  const number = phone.replace(/[^\d+]/g, "");
+  if (!number) {
+    showSaganaToast({ type: "info", text1: t("delivery.noPhone") });
+    return;
+  }
+  Linking.openURL(`tel:${number}`).catch(() =>
+    showSaganaToast({ type: "error", text1: t("delivery.callFailed") }),
+  );
+}
+
 export default function ActiveDeliveryPage() {
   const router = useRouter();
   const t = useT();
@@ -136,6 +149,7 @@ export default function ActiveDeliveryPage() {
   const [showPhaseTransition, setShowPhaseTransition] = useState(false);
   const [isSyncingStatus, setIsSyncingStatus] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [inAppCallOpen, setInAppCallOpen] = useState(false);
   const [selectedCancelReason, setSelectedCancelReason] = useState<CancelReason | "">("");
   const hasCompletedPhaseOneRef = useRef(false);
   const orderRef = useRef<RiderOrder | null>(null);
@@ -845,17 +859,29 @@ export default function ActiveDeliveryPage() {
                 </Pressable>
               )}
               <Pressable
+                style={[styles.headerActionButton, { backgroundColor: "#087434" }]}
+                onPress={() => setInAppCallOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel={t("delivery.callInAppA11y", { name: headerName })}
+              >
+                <MaterialIcons name={IconTheme.phoneInTalk as any} size={21} color="#FFFFFF" />
+              </Pressable>
+              {inAppCallOpen && (
+                <InAppCallModal
+                  orderId={order.orderId}
+                  callee={isPhaseOne ? "farmer" : "buyer"}
+                  name={headerName}
+                  avatar={headerAvatar}
+                  onUseDialer={() => {
+                    setInAppCallOpen(false);
+                    openDialer(headerNumber);
+                  }}
+                  onClose={() => setInAppCallOpen(false)}
+                />
+              )}
+              <Pressable
                 style={styles.headerActionButton}
-                onPress={() => {
-                  const number = headerNumber.replace(/[^\d+]/g, "");
-                  if (!number) {
-                    showSaganaToast({ type: "info", text1: t("delivery.noPhone") });
-                    return;
-                  }
-                  Linking.openURL(`tel:${number}`).catch(() =>
-                    showSaganaToast({ type: "error", text1: t("delivery.callFailed") }),
-                  );
-                }}
+                onPress={() => openDialer(headerNumber)}
                 accessibilityRole="button"
                 accessibilityLabel={t("delivery.callA11y", { name: headerName })}
               >
