@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, jest } from "@jest/globals";
+import { afterEach, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import React from "react";
 import { act, create } from "react-test-renderer";
+import { AppState } from "react-native";
 
 const mockGetRiderOrders = jest.fn(async () => [] as unknown[]);
 const mockGetRiderSettings = jest.fn(async () => ({ autoAccept: false, isOnline: true }));
@@ -65,7 +66,7 @@ jest.mock("@/lib/riderSettingsApi", () => ({
   updateRiderSettings: jest.fn(),
 }));
 
-import HomeScreen from "../index";
+import HomeScreen, { ORDER_POLL_MS } from "../index";
 
 const flush = () =>
   act(async () => {
@@ -105,4 +106,93 @@ describe("home screen order fetching", () => {
     expect(ordersAfter).toBe(ordersBefore);
     expect(settingsAfter).toBe(settingsBefore);
   }, 20000);
+});
+
+describe("home screen order polling", () => {
+  let appStateListeners: ((s: string) => void)[];
+  let appState: string;
+
+  const settle = () =>
+    act(async () => {
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    });
+  const tick = (ms: number) =>
+    act(async () => {
+      jest.advanceTimersByTime(ms);
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    });
+  const setAppState = (s: string) =>
+    act(async () => {
+      appState = s;
+      appStateListeners.forEach((l) => l(s));
+      for (let i = 0; i < 20; i++) await Promise.resolve();
+    });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockGetRiderOrders.mockClear();
+    appState = "active";
+    appStateListeners = [];
+    Object.defineProperty(AppState, "currentState", { get: () => appState, configurable: true });
+    jest.spyOn(AppState, "addEventListener").mockImplementation((_e, l) => {
+      appStateListeners.push(l as (s: string) => void);
+      return {
+        remove: () => {
+          appStateListeners = appStateListeners.filter((x) => x !== l);
+        },
+      };
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  async function mount() {
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(<HomeScreen />);
+    });
+    await settle();
+    return tree;
+  }
+
+  it("polls the order list every 10-15 s while open and in the foreground", async () => {
+    expect(ORDER_POLL_MS).toBeGreaterThanOrEqual(10_000);
+    expect(ORDER_POLL_MS).toBeLessThanOrEqual(15_000);
+    const tree = await mount();
+    const start = mockGetRiderOrders.mock.calls.length;
+
+    await tick(ORDER_POLL_MS);
+    expect(mockGetRiderOrders.mock.calls.length).toBe(start + 1);
+    await tick(ORDER_POLL_MS * 2);
+    expect(mockGetRiderOrders.mock.calls.length).toBe(start + 3);
+
+    await act(async () => tree.unmount());
+  });
+
+  it("does not poll in the background and fetches again on return", async () => {
+    const tree = await mount();
+    await setAppState("background");
+    const start = mockGetRiderOrders.mock.calls.length;
+
+    await tick(ORDER_POLL_MS * 5);
+    expect(mockGetRiderOrders.mock.calls.length).toBe(start);
+
+    await setAppState("active");
+    expect(mockGetRiderOrders.mock.calls.length).toBe(start + 1);
+
+    await act(async () => tree.unmount());
+  });
+
+  it("stops polling when the screen loses focus", async () => {
+    const tree = await mount();
+    await act(async () => tree.unmount());
+    const start = mockGetRiderOrders.mock.calls.length;
+
+    await tick(ORDER_POLL_MS * 5);
+    await setAppState("active");
+    expect(mockGetRiderOrders.mock.calls.length).toBe(start);
+  });
 });

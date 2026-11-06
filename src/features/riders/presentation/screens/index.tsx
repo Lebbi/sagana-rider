@@ -3,6 +3,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    AppState,
     Pressable,
     RefreshControl,
     ScrollView,
@@ -32,6 +33,8 @@ import OrderPreviewSheet from "@/features/riders/presentation/components/OrderPr
 import { getOrderCardRoute } from "@/features/riders/presentation/utils/orderNavigation";
 
 const BRAND_LOGO = require("@/assets/branding/sagana-wordform-logo.png");
+
+export const ORDER_POLL_MS = 12_000;
 
 /** Formats a PreciseAddress into a short label for the order card. */
 function formatAddressShort(addr: {
@@ -304,12 +307,21 @@ export default function DriverHomepageScreen() {
     };
   }, [setAutoAcceptEnabled, setIsOnline, fetchOrders]);
 
-  // Re-fetch orders every time the Home tab gains focus — keeps Active
-  // Delivery and Available Orders fresh after returning from Active
-  // Delivery page, Wallet, or any other tab.
+  // While Home is focused: fetch now, every ORDER_POLL_MS while the app is in
+  // the foreground, and again when it returns to the foreground (no Reverb).
   useFocusEffect(
     useCallback(() => {
       fetchOrders();
+      const timer = setInterval(() => {
+        if (AppState.currentState === "active") fetchOrders();
+      }, ORDER_POLL_MS);
+      const sub = AppState.addEventListener("change", (state) => {
+        if (state === "active") fetchOrders();
+      });
+      return () => {
+        clearInterval(timer);
+        sub.remove();
+      };
     }, [fetchOrders]),
   );
 
