@@ -12,6 +12,7 @@ import { broadcastRiderLocation } from "@/lib/riderOrdersApi";
 import { getDirections } from "@/lib/routingApi";
 import type { GeoPoint, RouteResponse, RouteStep } from "@/types/maps";
 import * as Location from "expo-location";
+import { getCurrentPositionAsync, watchPositionAsync } from "@/lib/googleServices";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ============================================================
@@ -160,7 +161,7 @@ export function useRiderNavigation(
 
     try {
       // Get initial position
-      const initialPos = await Location.getCurrentPositionAsync({
+      const initialPos = await getCurrentPositionAsync({
         accuracy: Location.Accuracy.Highest,
       });
 
@@ -190,7 +191,7 @@ export function useRiderNavigation(
       await fetchRoute(initialLocation);
 
       // Start watching position
-      const subscription = await Location.watchPositionAsync(
+      const subscription = await watchPositionAsync(
         {
           accuracy: Location.Accuracy.Highest,
           timeInterval: GPS_UPDATE_INTERVAL,

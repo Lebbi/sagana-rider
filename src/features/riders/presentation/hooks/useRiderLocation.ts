@@ -8,6 +8,7 @@
  */
 
 import * as Location from "expo-location";
+import { getCurrentPositionAsync, watchPositionAsync } from "@/lib/googleServices";
 import { useCallback, useEffect, useState } from "react";
 import type { GeoPoint } from "@/types/maps";
 
@@ -57,7 +58,7 @@ export function useRiderLocation(): UseRiderLocationReturn {
     setError(null);
 
     try {
-      const pos = await Location.getCurrentPositionAsync({
+      const pos = await getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
 
@@ -95,7 +96,7 @@ export function useRiderLocation(): UseRiderLocationReturn {
       const granted = await requestPermission();
       if (cancelled || !granted) return;
       try {
-        sub = await Location.watchPositionAsync(
+        sub = await watchPositionAsync(
           { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 5 },
           (pos) => {
             if (cancelled) return;

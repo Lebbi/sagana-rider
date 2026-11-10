@@ -1,10 +1,14 @@
 /**
  * src/features/riders/presentation/components/NativeMapView.native.tsx
  *
- * Map view for Android/iOS. Two modes, auto-selected at runtime:
+ * Map view for Android/iOS. Three modes, auto-selected at runtime:
+ *
+ *   - No Google Play services (Huawei): the Google map is blank there, so a
+ *     destination map uses RiderNavigationWebView (bundled Leaflet) and the
+ *     orders map with area pins uses the tile grid below.
  *
  *   - No API key (Expo Go OR keyless standalone build):
- *     SimpleMapFallback (Esri raster tiles via expo-image). The native
+ *     SimpleMapFallback (CARTO raster tiles via expo-image). The native
  *     react-native-maps MapView requires a Google Maps Android API key
  *     in AndroidManifest.xml — without it, MapView.onCreate throws
  *     "API key not found" and crashes the app. The tile grid always
@@ -19,7 +23,9 @@
 import { MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import { useT } from "@/lib/i18n";
+import RiderNavigationWebView from "@/features/riders/presentation/components/RiderNavigationWebView";
 import SimpleMapFallback from "@/features/riders/presentation/components/SimpleMapFallback";
+import { hasGoogleServices } from "@/lib/googleServices";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import type { GeoPoint, RouteResponse } from "@/types/maps";
 import Constants from "expo-constants";
@@ -34,7 +40,7 @@ import MapView, { Marker, Polyline, PROVIDER_DEFAULT, type Region } from "react-
 // for the JS bundle.
 const GOOGLE_MAPS_API_KEY =
   Constants.expoConfig?.extra?.googleMapsApiKey ?? "";
-const USE_NATIVE_MAP = !!GOOGLE_MAPS_API_KEY;
+const USE_NATIVE_MAP = !!GOOGLE_MAPS_API_KEY && hasGoogleServices;
 
 interface NativeMapViewProps {
   route: RouteResponse | null;
@@ -103,7 +109,22 @@ export default function NativeMapView({
   const mapCenter =
     (followRider ? riderLocation : null) ?? center ?? destination ?? DEFAULT_MAP_CENTER;
 
-  // ── No Google Maps API key: tile grid fallback ────────────────
+  if (!hasGoogleServices && destination && !areaPins) {
+    return (
+      <RiderNavigationWebView
+        route={route}
+        riderLocation={riderLocation}
+        riderHeading={riderHeading}
+        destination={destination}
+        destinationType={destinationType}
+        isDarkMode={isDarkMode}
+        onMapReady={onMapReady}
+        extraStops={extraStops}
+      />
+    );
+  }
+
+  // ── No Google Maps API key or no Google services: tile grid fallback ──
   if (!USE_NATIVE_MAP) {
     return (
       <ExpoGoMap
@@ -168,7 +189,7 @@ function geoToOverlayPercent(
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Tile grid fallback — Esri tiles with overlaid markers (no API key)
+// Tile grid fallback — CARTO tiles with overlaid markers
 // ═══════════════════════════════════════════════════════════════
 
 function ExpoGoMap({
@@ -210,7 +231,7 @@ function ExpoGoMap({
 
   return (
     <View style={styles.container}>
-      {/* Esri tile grid — centered on `center` (rider when idle, destination on a delivery) */}
+      {/* Tile grid — centered on `center` (rider when idle, destination on a delivery) */}
       <SimpleMapFallback destination={center} isDarkMode={isDarkMode} />
 
       {/* Destination marker — only when a destination is provided (active order) */}

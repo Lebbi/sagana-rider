@@ -7,7 +7,7 @@ dist/
 web-build/
 
 # Native
-android/
+/android/
 ios/
 .kotlin/
 *.orig.*

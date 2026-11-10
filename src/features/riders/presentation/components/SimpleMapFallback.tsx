@@ -1,13 +1,14 @@
 /**
  * src/features/riders/presentation/components/SimpleMapFallback.tsx
  *
- * A fallback map that doesn't use WebView. It renders OpenStreetMap tiles
+ * A fallback map that doesn't use WebView. It renders CARTO tiles
  * directly as images using expo-image. This works in Expo Go where WebView
  * with external scripts is blocked.
  *
  * Used by RiderNavigationWebView when the WebView fails to render.
  */
 
+import { getTileStyle, tileUrl } from "@/lib/mapTiles";
 import type { GeoPoint } from "@/types/maps";
 import { Image } from "expo-image";
 import { useMemo, useState, useCallback, useEffect } from "react";
@@ -50,10 +51,7 @@ export default function SimpleMapFallback({
       for (let dx = -1; dx <= 1; dx++) {
         const x = centerTile.x + dx;
         const y = centerTile.y + dy;
-        // Use Esri World Street Map tiles — free, no API key, no
-        // User-Agent requirement (OSM blocks non-browser requests,
-        // CARTO now requires an API key).
-        const url = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${zoom}/${y}/${x}`;
+        const url = tileUrl(getTileStyle(isDarkMode), zoom, x, y);
         list.push({ x, y, url });
       }
     }

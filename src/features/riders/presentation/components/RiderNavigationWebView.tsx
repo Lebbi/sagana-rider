@@ -48,6 +48,30 @@ export interface RiderNavigationWebViewProps {
   isDarkMode: boolean;
   /** Called when the map is ready to receive commands. */
   onMapReady?: () => void;
+  /** Pins besides the destination, such as the farm while heading to the buyer. */
+  extraStops?: MapStop[];
+}
+
+export type MapStop = { point: GeoPoint; type: "pickup" | "delivery" };
+
+function routeScript(route: RouteResponse | null): string {
+  if (!route) return "";
+  const data = JSON.stringify({
+    polyline: route.polyline,
+    totalDistance: route.totalDistance,
+    totalDuration: route.totalDuration,
+  });
+  return `if (window.updateRoute) { window.updateRoute(${data}); }`;
+}
+
+function riderScript(location: GeoPoint | null, heading: number | null): string {
+  if (!location) return "";
+  return `if (window.updateRiderPosition) { window.updateRiderPosition(${location.latitude}, ${location.longitude}, ${heading ?? "null"}); }`;
+}
+
+function stopsScript(stops: MapStop[] | undefined): string {
+  const data = JSON.stringify((stops ?? []).map((s) => ({ lat: s.point.latitude, lng: s.point.longitude, type: s.type })));
+  return `if (window.setExtraStops) { window.setExtraStops(${data}); }`;
 }
 
 // ============================================================
@@ -62,6 +86,7 @@ export default function RiderNavigationWebView({
   destinationType,
   isDarkMode,
   onMapReady,
+  extraStops,
 }: RiderNavigationWebViewProps) {
   const t = useT();
   const webViewRef = useRef<WebView>(null);
@@ -96,39 +121,19 @@ export default function RiderNavigationWebView({
     isDarkMode,
   });
 
-  // ----------------------------------------------------------
-  // Send route to WebView when it changes
-  // ----------------------------------------------------------
+  // A route or fix that arrives while the page loads is replayed on mapReady.
+  const latestRef = useRef({ route, riderLocation, riderHeading, extraStops });
+  latestRef.current = { route, riderLocation, riderHeading, extraStops };
 
-  useEffect(() => {
-    if (!route || !webViewRef.current || !isReadyRef.current) return;
+  const inject = useCallback((script: string) => {
+    if (script && webViewRef.current && isReadyRef.current) {
+      webViewRef.current.injectJavaScript(`${script} true;`);
+    }
+  }, []);
 
-    const jsCode = `
-      if (window.updateRoute) {
-        window.updateRoute(${JSON.stringify({
-          polyline: route.polyline,
-          totalDistance: route.totalDistance,
-          totalDuration: route.totalDuration,
-        })});
-      }
-    `;
-    webViewRef.current.injectJavaScript(jsCode);
-  }, [route]);
-
-  // ----------------------------------------------------------
-  // Send rider location + heading to WebView when it changes
-  // ----------------------------------------------------------
-
-  useEffect(() => {
-    if (!riderLocation || !webViewRef.current || !isReadyRef.current) return;
-
-    const jsCode = `
-      if (window.updateRiderPosition) {
-        window.updateRiderPosition(${riderLocation.latitude}, ${riderLocation.longitude}, ${riderHeading ?? "null"});
-      }
-    `;
-    webViewRef.current.injectJavaScript(jsCode);
-  }, [riderLocation, riderHeading]);
+  useEffect(() => inject(routeScript(route)), [inject, route]);
+  useEffect(() => inject(riderScript(riderLocation, riderHeading)), [inject, riderLocation, riderHeading]);
+  useEffect(() => inject(stopsScript(extraStops)), [inject, extraStops]);
 
   // ----------------------------------------------------------
   // Send destination to WebView when it changes (phase switch)
@@ -157,6 +162,10 @@ export default function RiderNavigationWebView({
           isReadyRef.current = true;
           setIsLoading(false);
           setHasError(false);
+          const latest = latestRef.current;
+          inject(routeScript(latest.route));
+          inject(stopsScript(latest.extraStops));
+          inject(riderScript(latest.riderLocation, latest.riderHeading));
           if (__DEV__) {
             console.log("[RiderNavigationWebView] Map is ready!");
           }
@@ -178,7 +187,7 @@ export default function RiderNavigationWebView({
         }
       }
     },
-    [onMapReady],
+    [inject, onMapReady],
   );
 
   return (
@@ -212,7 +221,10 @@ export default function RiderNavigationWebView({
           // Block everything else (external links, malicious redirects)
           return false;
         }}
-        onLoadStart={() => setIsLoading(true)}
+        onLoadStart={() => {
+          isReadyRef.current = false;
+          setIsLoading(true);
+        }}
         onLoadEnd={() => {
           setIsLoading(false);
           setShowFallback(false);
@@ -553,6 +565,17 @@ function generateMapHTML({
         if (!animationFrameId) {
           animationFrameId = requestAnimationFrame(animateRiderMarker);
         }
+      };
+
+      let extraStopMarkers = [];
+      window.setExtraStops = function(stops) {
+        extraStopMarkers.forEach(function(m) { map.removeLayer(m); });
+        extraStopMarkers = stops.map(function(stop) {
+          const html = stop.type === 'pickup'
+            ? '<div style="background: ${colors.pickupMarker}; width: 32px; height: 32px; border-radius: 50%; border: 3px solid ${colors.pickupMarkerBorder}; display: flex; align-items: center; justify-content: center;"><span style="color: ${colors.pickupMarkerBorder}; font-weight: bold; font-size: 15px;">P</span></div>'
+            : '<div style="background: ${colors.deliveryMarker}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white;"></div>';
+          return L.marker([stop.lat, stop.lng], { icon: L.divIcon({ className: 'stop-marker', html: html, iconSize: [32, 32], iconAnchor: [16, 16] }) }).addTo(map);
+        });
       };
 
       // Update destination (phase switch: pickup → delivery)

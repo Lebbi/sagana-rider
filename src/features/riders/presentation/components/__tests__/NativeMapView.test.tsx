@@ -1,7 +1,8 @@
-import { describe, expect, it, jest } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import type { ReactTestRenderer } from "react-test-renderer";
 
 let mockMapsKey = "";
+let mockHasGoogle = true;
 const mockAnimateCamera = jest.fn();
 const mockFitToCoordinates = jest.fn();
 const mockSetCamera = jest.fn();
@@ -42,6 +43,18 @@ jest.mock(
     default: () => null,
   }),
 );
+jest.mock(
+  "@/features/riders/presentation/components/RiderNavigationWebView",
+  () => ({
+    __esModule: true,
+    default: "RiderNavigationWebView",
+  }),
+);
+jest.mock("@/lib/googleServices", () => ({
+  get hasGoogleServices() {
+    return mockHasGoogle;
+  },
+}));
 jest.mock("@/hooks/useColors", () => ({ useColors: () => ({}) }));
 jest.mock("@/constants/IconTheme", () => ({ MaterialIcons: "Icon" }));
 jest.mock("@/lib/i18n", () => ({ useT: () => (key: string) => key }));
@@ -86,6 +99,10 @@ const pinIcons = (tree: ReactTestRenderer) =>
     .sort();
 
 describe("NativeMapView on a phone", () => {
+  afterEach(() => {
+    mockHasGoogle = true;
+  });
+
   it("shows the farmer pin beside the buyer pin on Google Maps", () => {
     mockMapsKey = "key";
     const tree = renderMap();
@@ -152,5 +169,28 @@ describe("NativeMapView on a phone", () => {
 
     map.rerender({ riderLocation: rider, followRider: false, heading: null });
     expect(mockSetCamera).toHaveBeenCalledWith({ heading: 0, pitch: 0 });
+  });
+
+  it("uses the Leaflet map with the farm stop on a phone without Google services", () => {
+    mockMapsKey = "key";
+    mockHasGoogle = false;
+    const rider = { latitude: 15.04, longitude: 120.695 };
+    const tree = renderMap({ riderLocation: rider });
+    expect(tree.root.findAll((n) => (n.type as unknown) === "Marker")).toHaveLength(0);
+    const leaflet = tree.root.findByType("RiderNavigationWebView" as never);
+    expect(leaflet.props).toMatchObject({
+      destination: buyer,
+      riderLocation: rider,
+      extraStops: [{ point: farmer, type: "pickup" }],
+    });
+  });
+
+  it("uses the tile grid with pins for the orders map on a phone without Google services", () => {
+    mockMapsKey = "key";
+    mockHasGoogle = false;
+    const tree = renderMap({ extraStops: undefined, areaPins: [nearOrder, farOrder] });
+    expect(tree.root.findAll((n) => (n.type as unknown) === "RiderNavigationWebView")).toHaveLength(0);
+    expect(tree.root.findAll((n) => (n.type as unknown) === "Marker")).toHaveLength(0);
+    expect(pinIcons(tree)).toEqual(["home", "warehouse"]);
   });
 });

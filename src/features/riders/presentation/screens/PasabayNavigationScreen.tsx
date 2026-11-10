@@ -29,6 +29,7 @@ import { getRiderOrders } from "@/lib/riderOrdersApi";
 import { optimizeRoute } from "@/lib/routingApi";
 import type { OptimizedStop, PasabayBatch } from "@/types/maps";
 import * as Location from "expo-location";
+import { getCurrentPositionAsync } from "@/lib/googleServices";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -95,7 +96,7 @@ export default function PasabayNavigationScreen() {
         try {
           const { status } = await Location.requestForegroundPermissionsAsync();
           if (status === "granted") {
-            const pos = await Location.getCurrentPositionAsync({
+            const pos = await getCurrentPositionAsync({
               accuracy: Location.Accuracy.Balanced,
             });
             riderStart = {
