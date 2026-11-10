@@ -60,7 +60,13 @@
       "expo-secure-store",
       "expo-status-bar",
       "expo-asset",
-      "expo-notifications",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/branding/notification-icon.png",
+          "color": "#087434"
+        }
+      ],
       "./plugins/withGoogleMapsKey",
       "./plugins/withGoogleServicesFile"
     ],
