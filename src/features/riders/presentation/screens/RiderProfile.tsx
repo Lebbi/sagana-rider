@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Linking,
     Modal,
     Pressable,
     ScrollView,
@@ -23,6 +24,7 @@ import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import { useUser } from "@/context/UserContext";
 import { LANGUAGES, getLanguage, setLanguage, t, useT, type TextKey } from "@/lib/i18n";
+import { LEGAL_URLS } from "@/lib/legalLinks";
 import { getRiderProfile, updateRiderProfile, type RiderProfileData, type VehicleType } from "@/lib/riderProfileApi";
 
 interface SelectionOption {
@@ -424,8 +426,8 @@ export default function RiderProfile() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() => null}
-              accessibilityRole="button"
+              onPress={() => Linking.openURL(LEGAL_URLS.terms)}
+              accessibilityRole="link"
               accessibilityLabel="Terms and conditions"
             >
               <View style={styles.settingLeft}>
@@ -567,8 +569,8 @@ export default function RiderProfile() {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.settingRow}
-              onPress={() => null}
-              accessibilityRole="button"
+              onPress={() => Linking.openURL(LEGAL_URLS.privacy)}
+              accessibilityRole="link"
               accessibilityLabel="Legal and policies"
             >
               <View style={styles.settingLeft}>

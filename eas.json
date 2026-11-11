@@ -49,8 +49,7 @@
     },
     "google-play": {
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "app-bundle"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
@@ -59,7 +58,9 @@
       },
       "cache": {
         "disabled": false
-      }
+      },
+      "environment": "production",
+      "autoIncrement": true
     }
   }
 }
