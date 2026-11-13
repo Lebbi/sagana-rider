@@ -90,12 +90,14 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       padding: 14,
     },
     balanceLabel: {
+      fontVariant: ["tabular-nums"],
       fontFamily: fontFamily.semiBold,
       fontWeight: fontWeight.semiBold,
       fontSize: 11,
       color: colors.textMuted,
     },
     balanceAmount: {
+      fontVariant: ["tabular-nums"],
       marginTop: 6,
       fontFamily: fontFamily.bold,
       fontWeight: fontWeight.bold,
@@ -103,6 +105,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       color: colors.primary,
     },
     balanceSubLabel: {
+      fontVariant: ["tabular-nums"],
       marginTop: 4,
       fontFamily: fontFamily.medium,
       fontWeight: fontWeight.medium,

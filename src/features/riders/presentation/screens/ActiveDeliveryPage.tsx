@@ -1066,6 +1066,7 @@ export default function ActiveDeliveryPage() {
                   />
                   <Pressable
                     style={removePhotoStyle}
+                    hitSlop={10}
                     onPress={() => setPickupPhoto(null)}
                     accessibilityRole="button"
                     accessibilityLabel={t("delivery.removePickupPhoto")}
@@ -1143,6 +1144,7 @@ export default function ActiveDeliveryPage() {
                         />
                         <Pressable
                           style={removePhotoStyle}
+                          hitSlop={10}
                           onPress={() =>
                             setDeliveryPhotos((prev) =>
                               prev.filter((_, i) => i !== index),

@@ -189,6 +189,7 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       alignItems: "flex-start",
     },
     priceText: {
+      fontVariant: ["tabular-nums"],
       fontFamily: fontFamily.bold,
       fontWeight: fontWeight.bold,
       fontSize: 16,

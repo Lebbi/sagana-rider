@@ -195,6 +195,7 @@ export default function RiderLoginScreen() {
                   value={email}
                   onChangeText={handleEmailChange}
                   keyboardType="email-address"
+                  autoComplete="email"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
@@ -214,10 +215,12 @@ export default function RiderLoginScreen() {
                       setPasswordError(validatePassword(v));
                     }}
                     secureTextEntry={!showPassword}
+                    autoComplete="current-password"
                     autoCapitalize="none"
                   />
                   <SaganaPressable
                     style={styles.eyeButton}
+                    hitSlop={8}
                     onPress={() => setShowPassword((v) => !v)}
                     disabled={loading}
                     accessibilityRole="button"

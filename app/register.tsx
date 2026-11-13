@@ -266,6 +266,7 @@ export default function RiderRegisterScreen() {
                 />
                 <SaganaPressable
                   style={styles.eyeButton}
+                  hitSlop={8}
                   onPress={() => setShowPassword((v) => !v)}
                   accessibilityRole="button"
                   accessibilityLabel={

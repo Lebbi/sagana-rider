@@ -571,12 +571,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   earningsLabel: {
+    fontVariant: ["tabular-nums"],
     fontFamily: fontFamily.regular,
     fontSize: 11,
     color: "#7A7A7A",
     marginBottom: 4,
   },
   earningsValue: {
+    fontVariant: ["tabular-nums"],
     fontFamily: fontFamily.bold,
     fontSize: 16,
     color: "#087434",

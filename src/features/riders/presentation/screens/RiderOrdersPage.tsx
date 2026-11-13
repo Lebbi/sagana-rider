@@ -199,6 +199,7 @@ export default function RiderOrdersPage() {
               <Pressable
                 key={tab}
                 style={styles.tabButton}
+                hitSlop={{ top: 6, bottom: 6 }}
                 onLayout={(e) => {
                   const { x, width } = e.nativeEvent.layout;
                   tabLayoutsRef.current[tab] = { x, width };
