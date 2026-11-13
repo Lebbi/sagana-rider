@@ -23,7 +23,7 @@ import {
     useState,
 } from "react";
 
-import { useRouter } from "expo-router";
+import { router, useRouter } from "expo-router";
 
 import { unregisterPush } from "../lib/notifications";
 import { secureStorage } from "../utils/secureStorage";
@@ -87,6 +87,9 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
             try {
               const parsedUser = JSON.parse(storedUser);
               setUserState(parsedUser);
+              // The saved user is enough to open the app; the /user refresh
+              // below updates it without blocking (APP-97).
+              setLoadingUser(false);
 
               if (__DEV__)
                 console.log("✅ UserContext: Restored user from storage");
@@ -142,6 +145,13 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
                 "user_id",
               ]);
               setUserState(null);
+              // The app may already be open from the saved user (APP-97);
+              // send it back to the start now that the login is known to be invalid.
+              try {
+                router.replace("/login");
+              } catch {
+                // Navigation not mounted yet; the start screen handles it.
+              }
 
               if (__DEV__)
                 console.log("❌ UserContext: Token invalid (401), cleared auth");
