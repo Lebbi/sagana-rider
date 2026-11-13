@@ -9,10 +9,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
+    FlatList,
     Pressable,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
     View,
@@ -24,11 +23,14 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { scale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { useColors } from "@/hooks/useColors";
 import { useT, type TextKey } from "@/lib/i18n";
+import { ordersEmptyState } from "@/lib/riderEmptyStates";
 import { getRiderOrders } from "@/lib/riderOrdersApi";
 import type { DeliveryStatus, RiderOrder } from "@/types/maps";
 import { useRouter } from "expo-router";
@@ -185,6 +187,82 @@ export default function RiderOrdersPage() {
     );
   };
 
+  const renderListEmpty = () => {
+    if (activeTab === "Pasabay") {
+      return (
+        <View style={batchStyles.comingSoon}>
+          <MaterialIcons
+            name={IconTheme.truck}
+            size={scale(44)}
+            color={colors.textMuted}
+          />
+          <Text style={batchStyles.comingSoonTitle}>
+            {t("orders.pasabayTitle")}
+          </Text>
+          <Text style={batchStyles.comingSoonText}>
+            {t("orders.pasabayBody")}
+          </Text>
+        </View>
+      );
+    }
+    if (isLoading) {
+      return (
+        <View
+          style={stateStyles.skeletonList}
+          accessible
+          accessibilityLabel={t("orders.loading")}
+          accessibilityState={{ busy: true }}
+        >
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={styles.card}>
+              <View style={styles.cardTopRow}>
+                <Skeleton width="45%" height={16} />
+                <Skeleton width={64} height={20} radius={10} />
+              </View>
+              <Skeleton width="60%" height={12} style={stateStyles.skeletonGap} />
+              <View style={styles.cardDivider} />
+              <Skeleton width="40%" height={12} />
+            </View>
+          ))}
+        </View>
+      );
+    }
+    if (error) {
+      return (
+        <View style={stateStyles.errorWrap}>
+          <MaterialIcons
+            name={IconTheme.alertCircle}
+            size={40}
+            color={colors.error}
+          />
+          <Text style={[stateStyles.errorTitle, { color: colors.text }]}>
+            {t("orders.couldNotLoad")}
+          </Text>
+          <Text
+            style={[stateStyles.errorDesc, { color: colors.textMuted }]}
+          >
+            {error}
+          </Text>
+          <Pressable
+            style={[
+              stateStyles.retryButton,
+              { backgroundColor: colors.primary },
+            ]}
+            onPress={() => fetchOrders()}
+          >
+            <Text style={stateStyles.retryButtonText}>{t("common.retry")}</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    return (
+      <EmptyState
+        state={ordersEmptyState(activeTab, orders.some((o) => o.status !== "cancelled"))}
+        onAction={() => router.navigate("/tabs" as never)}
+      />
+    );
+  };
+
   return (
     <View style={styles.screen}>
       <SafeAreaView style={styles.safeArea} edges={["left", "right"]}>
@@ -236,7 +314,9 @@ export default function RiderOrdersPage() {
           />
         </View>
 
-        <ScrollView
+        <FlatList
+          data={isLoading || error || activeTab === "Pasabay" ? [] : visibleOrders}
+          keyExtractor={(order) => String(order.orderId)}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -247,102 +327,31 @@ export default function RiderOrdersPage() {
               tintColor={colors.primary}
             />
           }
-        >
-          {/* Loading state */}
-          {isLoading && activeTab !== "Pasabay" && (
-            <View style={stateStyles.loadingWrap}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text
-                style={[stateStyles.loadingText, { color: colors.textMuted }]}
-              >
-                {t("orders.loading")}
-              </Text>
-            </View>
-          )}
-
-          {/* Error state */}
-          {error && !isLoading && activeTab !== "Pasabay" && (
-            <View style={stateStyles.errorWrap}>
-              <MaterialIcons
-                name={IconTheme.alertCircle}
-                size={40}
-                color={colors.error}
-              />
-              <Text style={[stateStyles.errorTitle, { color: colors.text }]}>
-                {t("orders.couldNotLoad")}
-              </Text>
-              <Text
-                style={[stateStyles.errorDesc, { color: colors.textMuted }]}
-              >
-                {error}
-              </Text>
-              <Pressable
-                style={[
-                  stateStyles.retryButton,
-                  { backgroundColor: colors.primary },
-                ]}
-                onPress={() => fetchOrders()}
-              >
-                <Text style={stateStyles.retryButtonText}>{t("common.retry")}</Text>
-              </Pressable>
-            </View>
-          )}
-
-          {/* Pasabay tab — Coming Soon (no backend batch model yet) */}
-          {activeTab === "Pasabay" && (
-            <View style={batchStyles.comingSoon}>
-              <MaterialIcons
-                name={IconTheme.truck}
-                size={scale(44)}
-                color={colors.textMuted}
-              />
-              <Text style={batchStyles.comingSoonTitle}>
-                {t("orders.pasabayTitle")}
-              </Text>
-              <Text style={batchStyles.comingSoonText}>
-                {t("orders.pasabayBody")}
-              </Text>
-            </View>
-          )}
-
-          {/* Order cards from API */}
-          {!isLoading &&
-            !error &&
-            activeTab !== "Pasabay" &&
-            visibleOrders.map((order) => (
-              <Pressable
-                key={order.orderId}
-                style={styles.card}
-                onPress={() => router.push(`/rider/orders/${order.orderId}` as never)}
-                accessibilityRole="button"
-                accessibilityLabel={t("orders.viewOrder", { number: order.orderNumber })}
-              >
-                <View style={styles.cardTopRow}>
-                  <Text style={styles.orderText}>
-                    {t("common.orderNumber", { number: order.orderNumber })}
-                  </Text>
-                  {renderStatusChip(order.status)}
-                </View>
-                <Text style={styles.dateText}>
-                  {formatDate(order.createdAt)}
+          ListEmptyComponent={renderListEmpty}
+          renderItem={({ item: order }) => (
+            <Pressable
+              key={order.orderId}
+              style={styles.card}
+              onPress={() => router.push(`/rider/orders/${order.orderId}` as never)}
+              accessibilityRole="button"
+              accessibilityLabel={t("orders.viewOrder", { number: order.orderNumber })}
+            >
+              <View style={styles.cardTopRow}>
+                <Text style={styles.orderText}>
+                  {t("common.orderNumber", { number: order.orderNumber })}
                 </Text>
-                <View style={styles.cardDivider} />
-                <Text style={styles.shippingText}>
-                  {t("orders.shippingFee", { amount: order.shippingFee.toFixed(2) })}
-                </Text>
-              </Pressable>
-            ))}
-
-          {/* Empty state */}
-          {!isLoading &&
-            !error &&
-            activeTab !== "Pasabay" &&
-            visibleOrders.length === 0 && (
-              <View style={styles.emptyWrap}>
-                <Text style={styles.emptyText}>{t("orders.empty")}</Text>
+                {renderStatusChip(order.status)}
               </View>
-            )}
-        </ScrollView>
+              <Text style={styles.dateText}>
+                {formatDate(order.createdAt)}
+              </Text>
+              <View style={styles.cardDivider} />
+              <Text style={styles.shippingText}>
+                {t("orders.shippingFee", { amount: order.shippingFee.toFixed(2) })}
+              </Text>
+            </Pressable>
+          )}
+        />
       </SafeAreaView>
     </View>
   );
@@ -353,16 +362,8 @@ export default function RiderOrdersPage() {
 // ============================================================
 
 const stateStyles = StyleSheet.create({
-  loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: fontFamily.regular,
-  },
+  skeletonList: { gap: 10 },
+  skeletonGap: { marginTop: 8 },
   errorWrap: {
     alignItems: "center",
     justifyContent: "center",

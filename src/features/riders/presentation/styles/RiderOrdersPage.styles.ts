@@ -125,14 +125,4 @@ export const stylesFactory = (colors: ReturnType<typeof useColors>) =>
       letterSpacing: 0.6,
       color: colors.white,
     },
-    emptyWrap: {
-      marginTop: 30,
-      alignItems: "center",
-    },
-    emptyText: {
-      fontFamily: fontFamily.semiBold,
-      fontWeight: fontWeight.semiBold,
-      fontSize: 11,
-      color: colors.textMuted,
-    },
   });

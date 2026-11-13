@@ -19,10 +19,12 @@ import {
 } from "react-native-safe-area-context";
 
 import { useAutoAccept } from "@/context/AutoAcceptContext";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { useColors } from "@/hooks/useColors";
 import { t, useT } from "@/lib/i18n";
+import { homeAvailableEmptyState } from "@/lib/riderEmptyStates";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
 import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
@@ -561,9 +563,7 @@ export default function DriverHomepageScreen() {
               ))
             ) : (
               <View style={styles.orderCard}>
-                <Text style={styles.routeSubText}>
-                  {t("home.noAvailable")}
-                </Text>
+                <EmptyState state={homeAvailableEmptyState(isOnDuty)} compact />
               </View>
             )}
           </View>

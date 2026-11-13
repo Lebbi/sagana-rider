@@ -1,5 +1,4 @@
 import {
-  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -7,6 +6,8 @@ import {
   View,
 } from "react-native";
 
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import { stylesFactory } from "@/features/riders/presentation/styles/RiderWalletPage.styles";
 import {
@@ -16,8 +17,9 @@ import {
 
 import { useColors } from "@/hooks/useColors";
 import { useT, type TextKey } from "@/lib/i18n";
+import { WALLET_NO_EARNINGS } from "@/lib/riderEmptyStates";
 import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 
 // Keep this true to PAY-07: the backend has no rider withdrawal yet.
@@ -27,11 +29,14 @@ const WALLET_INFO: { heading: TextKey; body: TextKey }[] = [
   { heading: "wallet.withdrawHeading", body: "wallet.withdrawBody" },
 ];
 
+const SKELETON_BARS = [40, 64, 28, 52, 72, 36, 48];
+
 export default function RiderWalletPage() {
   const colors = useColors();
   const styles = stylesFactory(colors);
   const insets = useSafeAreaInsets();
   const t = useT();
+  const router = useRouter();
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
@@ -95,7 +100,20 @@ export default function RiderWalletPage() {
           <Text style={styles.sectionHeading}>{t("wallet.thisWeek")}</Text>
           <View style={styles.earningsCard}>
             {isLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <View
+                style={styles.chartRow}
+                accessible
+                accessibilityLabel={t("common.loading")}
+                accessibilityState={{ busy: true }}
+              >
+                {SKELETON_BARS.map((pct, i) => (
+                  <View key={i} style={styles.chartColumn}>
+                    <View style={styles.chartBarTrack}>
+                      <Skeleton height={pct} radius={6} />
+                    </View>
+                  </View>
+                ))}
+              </View>
             ) : (
               <View style={styles.chartRow}>
                 {weeklyEarnings.map((entry) => (
@@ -129,9 +147,13 @@ export default function RiderWalletPage() {
 
           <View style={styles.balanceCard}>
             <Text style={styles.balanceLabel}>{t("wallet.available")}</Text>
-            <Text style={styles.balanceAmount}>
-              {isLoading ? "—" : formatPeso(wallet?.available_balance ?? 0)}
-            </Text>
+            {isLoading ? (
+              <Skeleton width={140} height={32} style={{ marginVertical: 4 }} />
+            ) : (
+              <Text style={styles.balanceAmount}>
+                {formatPeso(wallet?.available_balance ?? 0)}
+              </Text>
+            )}
             <Text style={styles.balanceSubLabel}>
               {t("wallet.total", { amount: isLoading ? "—" : formatPeso(wallet?.total_earnings ?? 0) })}
             </Text>
@@ -140,7 +162,11 @@ export default function RiderWalletPage() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("wallet.recent")}</Text>
             {isLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <View style={{ gap: 8 }}>
+                <Skeleton width="70%" height={14} />
+                <Skeleton width="55%" height={14} />
+                <Skeleton width="62%" height={14} />
+              </View>
             ) : (wallet?.recent_earnings ?? []).length > 0 ? (
               (wallet?.recent_earnings ?? []).map((earning, idx) => (
                 <Text key={idx} style={styles.cardText}>
@@ -148,7 +174,11 @@ export default function RiderWalletPage() {
                 </Text>
               ))
             ) : (
-              <Text style={styles.cardText}>{t("wallet.noEarnings")}</Text>
+              <EmptyState
+                state={WALLET_NO_EARNINGS}
+                compact
+                onAction={() => router.navigate("/tabs" as never)}
+              />
             )}
           </View>
         </ScrollView>
