@@ -10,7 +10,7 @@
 
 import { getTileStyle, tileUrl } from "@/lib/mapTiles";
 import type { GeoPoint } from "@/types/maps";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 
@@ -95,7 +95,7 @@ export default function SimpleMapFallback({
       {[0, 1, 2].map((row) => (
         <View key={`row-${row}`} style={styles.tileRow}>
           {tiles.slice(row * 3, row * 3 + 3).map((tile) => (
-            <Image
+            <SaganaImage
               key={`${tile.x}-${tile.y}`}
               source={{ uri: tile.url }}
               style={styles.tile}

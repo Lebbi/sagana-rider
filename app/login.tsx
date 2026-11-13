@@ -11,7 +11,7 @@
  */
 
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { Redirect, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -173,7 +173,7 @@ export default function RiderLoginScreen() {
           >
             <View style={styles.hero}>
               <View style={styles.logoCircle}>
-                <Image
+                <SaganaImage
                   source={BrandAssets.iconLogo}
                   style={styles.logoIcon}
                   tintColor={d.logoOnPrimary}

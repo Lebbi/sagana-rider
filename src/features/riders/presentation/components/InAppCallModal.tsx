@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -147,7 +147,7 @@ export default function InAppCallModal({ orderId, callee, name, avatar, onUseDia
       <View style={styles.screen}>
         <View style={styles.who}>
           {avatar ? (
-            <Image source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
+            <SaganaImage source={{ uri: avatar }} style={styles.avatar} contentFit="cover" />
           ) : (
             <View style={[styles.avatar, styles.avatarEmpty]}>
               <MaterialIcons name={"person" as any} size={56} color="#087434" />

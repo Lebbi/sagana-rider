@@ -1,4 +1,4 @@
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -456,7 +456,7 @@ export default function DriverHomepageScreen() {
           }
         >
           <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-            <Image
+            <SaganaImage
               source={BRAND_LOGO}
               style={styles.logo}
               contentFit="contain"

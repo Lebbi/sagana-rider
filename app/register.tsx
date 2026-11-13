@@ -7,7 +7,7 @@
  */
 
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -378,7 +378,7 @@ export default function RiderRegisterScreen() {
                     </LoginText>
                   ) : null}
                   {photo ? (
-                    <Image
+                    <SaganaImage
                       source={{ uri: photo.uri }}
                       style={[
                         styles.photoPreview,

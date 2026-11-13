@@ -1,5 +1,5 @@
 import { stylesFactory } from "@/features/riders/presentation/styles/RiderProfile.styles";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -182,7 +182,7 @@ export default function RiderProfile() {
             {/* Burger menu removed — settings list below covers everything */}
 
             <View style={styles.avatarWithBadge}>
-              <Image
+              <SaganaImage
                 source={
                   profileData?.profile_image
                     ? { uri: profileData.profile_image }
@@ -234,7 +234,7 @@ export default function RiderProfile() {
             <View style={styles.promoBadge}>
               <Text style={styles.promoBadgeText}>{t("common.comingSoon")}</Text>
             </View>
-            <Image
+            <SaganaImage
               source={SAGANA_LOGO}
               style={styles.promoLogo}
               contentFit="contain"

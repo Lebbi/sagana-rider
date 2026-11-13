@@ -8,7 +8,7 @@
  */
 
 import { stylesFactory } from "@/features/riders/presentation/styles/EditProfilePage.styles";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -154,7 +154,7 @@ export default function EditProfilePage() {
         >
           {/* Avatar (display only — upload in future phase) */}
           <View style={styles.avatarSection}>
-            <Image
+            <SaganaImage
               source={
                 profile?.profile_image
                   ? { uri: profile.profile_image }

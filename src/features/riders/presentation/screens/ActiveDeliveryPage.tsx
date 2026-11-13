@@ -1,7 +1,7 @@
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { styles } from "@/features/riders/presentation/styles/ActiveDeliveryPage.styles";
-import { Image } from "expo-image";
+import { SaganaImage } from "@/components/ui/SaganaImage";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -848,7 +848,7 @@ export default function ActiveDeliveryPage() {
             >
               <MaterialIcons name="arrow-back" size={21} color="#087434" />
             </Pressable>
-            <Image
+            <SaganaImage
               source={{ uri: headerAvatar }}
               style={styles.avatar}
               contentFit="cover"
@@ -1069,7 +1069,7 @@ export default function ActiveDeliveryPage() {
 
               {pickupPhoto && (
                 <View>
-                  <Image
+                  <SaganaImage
                     source={{ uri: `data:image/jpeg;base64,${pickupPhoto}` }}
                     style={{
                       width: "100%",
@@ -1152,7 +1152,7 @@ export default function ActiveDeliveryPage() {
                   >
                     {deliveryPhotos.map((photo, index) => (
                       <View key={index} style={{ flex: 1 }}>
-                        <Image
+                        <SaganaImage
                           source={{ uri: `data:image/jpeg;base64,${photo}` }}
                           style={{ height: 90, borderRadius: 8 }}
                           contentFit="cover"
