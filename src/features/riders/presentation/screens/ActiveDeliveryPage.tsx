@@ -34,8 +34,9 @@ import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurn
 import { useCameraHeading } from "@/features/riders/presentation/hooks/useCameraHeading";
 import { useRiderNavigation } from "@/features/riders/presentation/hooks/useRiderNavigation";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
-import { cancelOrder, getRiderOrderById, getRiderOrders, updateOrderStatus } from "@/lib/riderOrdersApi";
+import { cancelOrder, getRiderOrderById, getRiderOrders } from "@/lib/riderOrdersApi";
 import type { CancelReason } from "@/lib/riderOrdersApi";
+import { sendOrQueueStatus } from "@/lib/riderOutbox";
 import { showSaganaToast } from "@/components/ui/saganaToastConfig";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import { t, useT, type TextKey } from "@/lib/i18n";
@@ -52,6 +53,15 @@ const removePhotoStyle = {
   alignItems: "center" as const,
   justifyContent: "center" as const,
 };
+
+function showSavedOfflineToast() {
+  showSaganaToast({
+    type: "info",
+    text1: t("delivery.savedOfflineTitle"),
+    text2: t("delivery.savedOfflineBody"),
+    visibilityTime: 6000,
+  });
+}
 
 const DRAG_DISMISS_THRESHOLD = 64;
 const VOICE_MUTED_KEY = "sagana.voiceMuted";
@@ -412,10 +422,11 @@ export default function ActiveDeliveryPage() {
       setIsSyncingStatus(true);
       try {
         const orderId = order?.orderId ?? numericOrderId;
-        await updateOrderStatus(orderId, "picked_up", pickupPhoto);
+        const sent = await sendOrQueueStatus(orderId, "picked_up", pickupPhoto);
+        if (sent === "queued") showSavedOfflineToast();
         // Rider now heads to the buyer: farmer screen flips to In Transit.
         // Best effort — pickup is already saved and "delivered" may skip this step.
-        updateOrderStatus(orderId, "to_delivery").catch(() => {});
+        sendOrQueueStatus(orderId, "to_delivery").catch(() => {});
         setShowPhaseTransition(true);
         setTimeout(() => {
           setShowPhaseTransition(false);
@@ -557,11 +568,15 @@ export default function ActiveDeliveryPage() {
     if (!id) return;
     setIsSyncingStatus(true);
     try {
-      await updateOrderStatus(id, "delivered", deliveryPhotos[0]);
-      handleApiSuccess(
-        t("delivery.completeTitle"),
-        t("delivery.completeBody"),
-      );
+      const sent = await sendOrQueueStatus(id, "delivered", deliveryPhotos[0]);
+      if (sent === "queued") {
+        showSavedOfflineToast();
+      } else {
+        handleApiSuccess(
+          t("delivery.completeTitle"),
+          t("delivery.completeBody"),
+        );
+      }
       loadOrder(null);
       router.replace("/tabs" as never);
     } catch (e: any) {

@@ -18,6 +18,7 @@ import "react-native-reanimated";
 
 import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
 import { PushNotifications } from "@/components/PushNotifications";
+import { RiderOutboxSync } from "@/components/RiderOutboxSync";
 import { saganaToastConfig } from "@/components/ui/saganaToastConfig";
 import { UserProvider } from "@/context/UserContext";
 import { loadLanguage } from "@/lib/i18n";
@@ -87,6 +88,7 @@ export default function RootLayout() {
         <UserProvider>
           <Stack screenOptions={{ headerShown: false }} />
           <PushNotifications />
+          <RiderOutboxSync />
           {/* Toast host — required for handleApiSuccess/handleApiError to
               render. Without this, all toasts are silently invisible. */}
           <Toast config={saganaToastConfig} />

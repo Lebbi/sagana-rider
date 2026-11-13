@@ -64,10 +64,13 @@ export async function updateOrderStatus(
   proofPhotoBase64?: string,
 ): Promise<{ success: boolean }> {
   if (USE_MOCK) return { success: true };
-  const { data } = await api.patch(`/rider/orders/${orderId}/status`, {
-    status,
-    proof_photo: proofPhotoBase64,
-  });
+  // 30 s, not the 60 s default: on a dead signal the update goes to the
+  // offline queue (lib/riderOutbox.ts) sooner instead of holding the rider.
+  const { data } = await api.patch(
+    `/rider/orders/${orderId}/status`,
+    { status, proof_photo: proofPhotoBase64 },
+    { timeout: 30000 },
+  );
   return data;
 }
 
