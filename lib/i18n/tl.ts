@@ -283,6 +283,8 @@ export const tl: Translation = {
   "home.autoAcceptDesc": "Kusang i-accept ang mga papasok na delivery order",
   "home.activeDelivery": "Active na Delivery",
   "home.noActive": "Walang active na delivery. Tumanggap ng order sa ibaba para magsimula.",
+  "home.lastDropTitle": "Tapos na ang huling drop!",
+  "home.lastDropBody": "Wala nang naghihintay na delivery. Ang galing mo ngayong araw.",
   "home.availableOrders": "Mga Available na Order",
 
   "wallet.title": "Wallet",

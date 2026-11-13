@@ -281,6 +281,8 @@ export const en = {
   "home.autoAcceptDesc": "Automatically accept incoming delivery orders",
   "home.activeDelivery": "Active Delivery",
   "home.noActive": "No active delivery. Accept an order below to start one.",
+  "home.lastDropTitle": "Last drop done!",
+  "home.lastDropBody": "No more deliveries waiting. Great work today.",
   "home.availableOrders": "Available Orders",
 
   "wallet.title": "Wallet",

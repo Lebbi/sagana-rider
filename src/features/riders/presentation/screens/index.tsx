@@ -1,5 +1,5 @@
 import { SaganaImage } from "@/components/ui/SaganaImage";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
@@ -19,6 +19,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { useAutoAccept } from "@/context/AutoAcceptContext";
+import { Celebration } from "@/components/ui/Celebration";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
@@ -241,6 +242,16 @@ export default function DriverHomepageScreen() {
   const [previewOrderId, setPreviewOrderId] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  // Set when Active Delivery returns after a drop; the next fetch decides.
+  const { delivered } = useLocalSearchParams<{ delivered?: string }>();
+  const checkLastDropRef = useRef(false);
+  const [showLastDrop, setShowLastDrop] = useState(false);
+  const hideLastDrop = useCallback(() => setShowLastDrop(false), []);
+  useEffect(() => {
+    if (delivered !== "1") return;
+    checkLastDropRef.current = true;
+    router.setParams({ delivered: undefined });
+  }, [delivered, router]);
 
   // Fetch orders (also used to refresh after accept)
   const fetchOrders = useCallback(async () => {
@@ -264,6 +275,10 @@ export default function DriverHomepageScreen() {
 
       setActiveOrder(active);
       setAvailableOrders(available);
+      if (checkLastDropRef.current) {
+        checkLastDropRef.current = false;
+        if (!active) setShowLastDrop(true);
+      }
     } catch (e: any) {
       console.error('[RiderHome] Failed to load orders:', e?.message, e?.response?.status, e?.response?.data);
       if (__DEV__) {
@@ -569,6 +584,13 @@ export default function DriverHomepageScreen() {
           </View>
         </ScrollView>
       </SafeAreaView>
+      {showLastDrop && (
+        <Celebration
+          title={t("home.lastDropTitle")}
+          body={t("home.lastDropBody")}
+          onDone={hideLastDrop}
+        />
+      )}
       {previewOrder && (
         <OrderPreviewSheet
           order={previewOrder}

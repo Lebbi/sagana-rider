@@ -578,7 +578,7 @@ export default function ActiveDeliveryPage() {
         );
       }
       loadOrder(null);
-      router.replace("/tabs" as never);
+      router.replace({ pathname: "/tabs", params: { delivered: "1" } } as never);
     } catch (e: any) {
       const status = e?.response?.status;
       const msg = e?.response?.data?.message;

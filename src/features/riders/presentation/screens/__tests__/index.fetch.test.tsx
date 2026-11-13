@@ -6,11 +6,14 @@ import { AppState } from "react-native";
 const mockGetRiderOrders = jest.fn(async () => [] as unknown[]);
 const mockGetRiderSettings = jest.fn(async () => ({ autoAccept: false, isOnline: true }));
 let mockLocation: { latitude: number; longitude: number } | null = null;
+let mockParams: { delivered?: string } = {};
+const mockRouter = { push: jest.fn(), setParams: jest.fn() };
 
 jest.mock("expo-router", () => {
   const R = require("react");
   return {
-    useRouter: () => ({ push: jest.fn() }),
+    useRouter: () => mockRouter,
+    useLocalSearchParams: () => mockParams,
     useFocusEffect: (cb: () => void) => R.useEffect(cb, [cb]),
   };
 });
@@ -38,6 +41,10 @@ jest.mock("@/features/riders/presentation/components/OrderPreviewSheet", () => (
   __esModule: true,
   default: () => null,
 }));
+jest.mock("@/components/ui/Celebration", () => {
+  const { Text } = require("react-native");
+  return { Celebration: ({ title }: { title: string }) => <Text>{title}</Text> };
+});
 jest.mock("@/lib/mapTiles", () => ({ DEFAULT_MAP_CENTER: { latitude: 0, longitude: 0 } }));
 jest.mock("@/utils/errorHandler", () => ({
   handleApiError: jest.fn(),
@@ -195,4 +202,42 @@ describe("home screen order polling", () => {
     await setAppState("active");
     expect(mockGetRiderOrders.mock.calls.length).toBe(start);
   });
+});
+
+describe("last drop celebration", () => {
+  const address = { street: "", barangay: "", city: "", province: "", latitude: 14, longitude: 121 };
+  const activeOrder = {
+    orderId: 9,
+    orderNumber: "SG-9",
+    status: "to_pickup",
+    shippingFee: 40,
+    pickup: { address, farmerName: "Farm" },
+    delivery: { address, buyerName: "Buyer", buyerPhone: "", noteToRider: "" },
+  };
+
+  async function homeAfterDrop(orders: unknown[]) {
+    mockParams = { delivered: "1" };
+    mockGetRiderOrders.mockImplementation(async () => orders);
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(<HomeScreen />);
+    });
+    await flush();
+    const shown = tree.root
+      .findAll((n) => typeof n.props.children === "string")
+      .some((n) => n.props.children === "Last drop done!");
+    await act(async () => tree.unmount());
+    mockParams = {};
+    mockGetRiderOrders.mockImplementation(async () => []);
+    return shown;
+  }
+
+  it("celebrates when the rider comes back from a drop with nothing left to deliver", async () => {
+    expect(await homeAfterDrop([])).toBe(true);
+    expect(mockRouter.setParams).toHaveBeenCalledWith({ delivered: undefined });
+  }, 20000);
+
+  it("stays quiet while another delivery is still active", async () => {
+    expect(await homeAfterDrop([activeOrder])).toBe(false);
+  }, 20000);
 });
