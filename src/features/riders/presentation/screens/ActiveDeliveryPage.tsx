@@ -804,7 +804,7 @@ export default function ActiveDeliveryPage() {
             onTouchEnd={handleMapTouchEnd}
           >
           <NativeMapView
-            route={nav.route}
+            route={mapPinMissing ? null : nav.route}
             riderLocation={nav.riderLocation}
             riderHeading={nav.riderHeading}
             destination={
@@ -819,25 +819,28 @@ export default function ActiveDeliveryPage() {
           />
           </View>
 
-          {/* ETA badge overlay */}
-          <View style={styles.etaBadgeOverlay}>
-            <ETABadge
-              minutes={nav.etaMinutes}
-              distanceKm={(nav.route?.totalDistance ?? 0) / 1000}
-              isNavigating={!!nav.riderLocation}
-            />
-          </View>
+          {/* No ETA until a route exists, and no route, ETA or directions to a placeholder point. */}
+          {!mapPinMissing && nav.route ? (
+            <View style={styles.etaBadgeOverlay}>
+              <ETABadge
+                minutes={nav.etaMinutes}
+                distanceKm={nav.route.totalDistance / 1000}
+                isNavigating={!!nav.riderLocation}
+              />
+            </View>
+          ) : null}
 
-          {/* Turn-by-turn card overlay */}
-          <View style={styles.turnByTurnOverlay}>
-            <TurnByTurnCard
-              currentStep={nav.currentStep}
-              nextStep={nav.nextStep}
-              distanceToNextStep={nav.distanceToNextStep}
-              etaMinutes={nav.etaMinutes}
-              muted={voiceMuted}
-            />
-          </View>
+          {!mapPinMissing ? (
+            <View style={styles.turnByTurnOverlay}>
+              <TurnByTurnCard
+                currentStep={nav.currentStep}
+                nextStep={nav.nextStep}
+                distanceToNextStep={nav.distanceToNextStep}
+                etaMinutes={nav.etaMinutes}
+                muted={voiceMuted}
+              />
+            </View>
+          ) : null}
 
           <View style={styles.topBar}>
             <Pressable

@@ -116,7 +116,7 @@ export default function RiderWalletPage() {
               </View>
             ) : (
               <View style={styles.chartRow}>
-                {weeklyEarnings.map((entry) => (
+                {weeklyEarnings.map((entry, index) => (
                   <View key={entry.day} style={styles.chartColumn}>
                     <View style={styles.chartBarTrack}>
                       <View
@@ -131,7 +131,8 @@ export default function RiderWalletPage() {
                     <Text
                       style={[
                         styles.chartDayLabel,
-                        entry.day === "SUN" ? styles.chartDayLabelActive : null,
+                        // The server sends the last 7 days ending today.
+                        index === weeklyEarnings.length - 1 ? styles.chartDayLabelActive : null,
                       ]}
                     >
                       {entry.day}

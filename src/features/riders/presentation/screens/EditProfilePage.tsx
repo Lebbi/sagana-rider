@@ -162,9 +162,6 @@ export default function EditProfilePage() {
               }
               style={styles.avatar}
             />
-            <Text style={styles.avatarHint}>
-              {t("editProfile.photoSoon")}
-            </Text>
           </View>
 
           {/* Personal Info */}

@@ -56,13 +56,13 @@ function formatAddressShort(addr: {
 
 /** Formats a RiderOrder into the display shape used by the card component. */
 function toOrderCard(order: RiderOrder, isActive: boolean, riderLoc?: GeoPoint) {
-  const pickupDistance = riderLoc && order.pickup.address.latitude && order.pickup.address.longitude
+  const pickupDistance = riderLoc && !order.pickup.address.coordinatesMissing && order.pickup.address.latitude && order.pickup.address.longitude
     ? calculateDistance(riderLoc, {
         latitude: order.pickup.address.latitude,
         longitude: order.pickup.address.longitude,
       })
     : null;
-  const dropoffDistance = riderLoc && order.delivery.address.latitude && order.delivery.address.longitude
+  const dropoffDistance = riderLoc && !order.delivery.address.coordinatesMissing && order.delivery.address.latitude && order.delivery.address.longitude
     ? calculateDistance(riderLoc, {
         latitude: order.delivery.address.latitude,
         longitude: order.delivery.address.longitude,
@@ -534,10 +534,6 @@ export default function DriverHomepageScreen() {
               areaPins={availablePins}
               isDarkMode={false}
             />
-
-            <View style={styles.locateButton}>
-              <MaterialIcons name="my-location" size={23} color="#0A6438" />
-            </View>
           </View>
 
           <View style={styles.sheet}>

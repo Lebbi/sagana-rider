@@ -2,7 +2,7 @@
  * src/features/riders/presentation/screens/RiderOrdersPage.tsx
  *
  * Rider orders list — fetches from /api/rider/orders.
- * Tabs: All | New | Processing | Delivered | Pasabay
+ * Tabs: All | New | Processing | Delivered
  *
  * @see docs/maps-implementation-plan.md
  */
@@ -46,7 +46,6 @@ const ORDER_TABS: OrderTab[] = [
   "New",
   "Processing",
   "Delivered",
-  "Pasabay",
 ];
 
 const TAB_LABELS: Record<OrderTab, TextKey> = {
