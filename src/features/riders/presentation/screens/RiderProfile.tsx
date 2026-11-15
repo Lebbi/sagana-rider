@@ -607,6 +607,28 @@ export default function RiderProfile() {
                 <Text style={styles.logoutLabel}>{t("profile.logout")}</Text>
               </View>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => router.push("/delete-account" as never)}
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.deleteAccount")}
+            >
+              <View style={styles.settingLeft}>
+                <View style={styles.settingIconCircle}>
+                  <MaterialIcons
+                    name="delete-outline"
+                    size={15}
+                    color={colors.error}
+                  />
+                </View>
+                <Text style={styles.logoutLabel}>{t("profile.deleteAccount")}</Text>
+              </View>
+              <MaterialIcons
+                name={IconTheme.chevronRight}
+                size={14}
+                color={colors.textSubtle}
+              />
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
