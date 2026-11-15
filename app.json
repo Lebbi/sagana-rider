@@ -81,6 +81,11 @@
       "router": {},
       "googleMapsApiKey": ""
     },
-    "owner": "sagana_ph"
+    "owner": "sagana_ph",
+    "updates": {
+      "url": "https://u.expo.dev/0ec50dcf-4f23-40ea-8e82-7da5dba1808a",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    }
   }
 }
