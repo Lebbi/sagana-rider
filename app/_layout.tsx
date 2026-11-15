@@ -20,10 +20,21 @@ import { defaultInputStyle, defaultTextStyle } from "@/constants/FontTheme";
 import { PushNotifications } from "@/components/PushNotifications";
 import { RiderOutboxSync } from "@/components/RiderOutboxSync";
 import { saganaToastConfig } from "@/components/ui/saganaToastConfig";
-import { UserProvider } from "@/context/UserContext";
+import { UserProvider, useUser } from "@/context/UserContext";
 import { loadLanguage } from "@/lib/i18n";
+import { initSentry, setSentryUser } from "@/lib/sentry";
 import { configureNotifications } from "@/lib/notifications";
 import Toast from "react-native-toast-message";
+
+// Before any render, so errors during app boot are reported too.
+initSentry();
+
+/** Keeps the crash-report user id in step with the signed-in user. */
+function SentryUserTag() {
+  const { user } = useUser();
+  useEffect(() => setSentryUser(user?.id), [user?.id]);
+  return null;
+}
 
 /**
  * Apply a default text style to every `<Text>` instance in the app.
@@ -86,6 +97,7 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <UserProvider>
+          <SentryUserTag />
           <Stack screenOptions={{ headerShown: false }} />
           <PushNotifications />
           <RiderOutboxSync />

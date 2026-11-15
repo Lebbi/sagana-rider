@@ -1,9 +1,10 @@
 // metro.config.js — Sagana Rider
 // Simple default config. The worklets web-shim from the main app is not
 // needed yet (no web target for riders); add it back if web support lands.
-const { getDefaultConfig } = require("expo/metro-config");
+// Sentry's Expo config adds debug ids so crash reports can map to source (OPS-11).
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 
 config.transformer.getTransformOptions = async () => ({
   transform: {

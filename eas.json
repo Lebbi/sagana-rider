@@ -15,7 +15,9 @@
       },
       "env": {
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_BUILD_PROFILE": "development",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "preview": {
@@ -30,7 +32,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_BUILD_PROFILE": "preview",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "production": {
@@ -41,7 +45,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_BUILD_PROFILE": "production",
+        "SENTRY_ALLOW_FAILURE": "true"
       },
       "cache": {
         "disabled": false
@@ -55,7 +61,9 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://sagana-api.onrender.com/api",
         "EAS_SKIP_AUTO_FINGERPRINT": "1",
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_BUILD_PROFILE": "google-play",
+        "SENTRY_ALLOW_FAILURE": "true"
       },
       "cache": {
         "disabled": false
