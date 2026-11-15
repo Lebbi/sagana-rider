@@ -69,7 +69,7 @@
       ],
       "./plugins/withGoogleMapsKey",
       "./plugins/withGoogleServicesFile",
-      "@sentry/react-native"
+      ["@sentry/react-native", { "organization": "sagana-f3", "project": "sagana-rider", "url": "https://sentry.io/" }]
     ],
     "experiments": {
       "typedRoutes": true
