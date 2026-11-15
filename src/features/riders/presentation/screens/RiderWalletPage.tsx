@@ -19,10 +19,11 @@ import { useColors } from "@/hooks/useColors";
 import { useT, type TextKey } from "@/lib/i18n";
 import { WALLET_NO_EARNINGS } from "@/lib/riderEmptyStates";
 import { getRiderWallet, type RiderWalletData } from "@/lib/riderProfileApi";
+import { getRiderWithdrawals, type RiderWithdrawal } from "@/lib/riderWithdrawal";
+import { RiderWithdrawSection } from "@/features/riders/presentation/components/RiderWithdrawSection";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 
-// Keep this true to PAY-07: the backend has no rider withdrawal yet.
 const WALLET_INFO: { heading: TextKey; body: TextKey }[] = [
   { heading: "wallet.earningsHeading", body: "wallet.earningsBody" },
   { heading: "wallet.balanceHeading", body: "wallet.balanceBody" },
@@ -38,6 +39,8 @@ export default function RiderWalletPage() {
   const t = useT();
   const router = useRouter();
   const [wallet, setWallet] = useState<RiderWalletData | null>(null);
+  const [withdrawals, setWithdrawals] = useState<RiderWithdrawal[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoVisible, setIsInfoVisible] = useState(false);
 
@@ -49,9 +52,14 @@ export default function RiderWalletPage() {
       setIsLoading(true);
       (async () => {
         try {
-          const data = await getRiderWallet();
+          const [data, history] = await Promise.all([
+            getRiderWallet(),
+            // An older server has no withdrawals route; the wallet still shows.
+            getRiderWithdrawals().catch(() => [] as RiderWithdrawal[]),
+          ]);
           if (!mounted) return;
           setWallet(data);
+          setWithdrawals(history);
         } catch (e) {
           if (__DEV__) console.warn("[RiderWallet] Failed to fetch:", e);
         } finally {
@@ -61,7 +69,7 @@ export default function RiderWalletPage() {
       return () => {
         mounted = false;
       };
-    }, []),
+    }, [reloadKey]),
   );
 
   const weeklyEarnings = wallet?.weekly_earnings ?? [];
@@ -159,6 +167,16 @@ export default function RiderWalletPage() {
               {t("wallet.total", { amount: isLoading ? "—" : formatPeso(wallet?.total_earnings ?? 0) })}
             </Text>
           </View>
+
+          {!isLoading && wallet?.withdrawable !== undefined ? (
+            <RiderWithdrawSection
+              withdrawable={wallet.withdrawable}
+              min={wallet.min_withdraw ?? 100}
+              withdrawals={withdrawals}
+              formatPeso={formatPeso}
+              onRequested={() => setReloadKey((k) => k + 1)}
+            />
+          ) : null}
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t("wallet.recent")}</Text>

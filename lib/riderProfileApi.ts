@@ -33,6 +33,9 @@ export interface RiderWalletData {
     order_id: number | null;
     description: string;
   }[];
+  /** Balance minus payouts still waiting (PAY-07). */
+  withdrawable?: number;
+  min_withdraw?: number;
 }
 
 export async function getRiderProfile(): Promise<RiderProfileData> {
