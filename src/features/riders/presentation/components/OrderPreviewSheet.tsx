@@ -1,5 +1,6 @@
 import { MaterialIcons } from "@/constants/IconTheme";
 import { fontFamily } from "@/constants/FontTheme";
+import MapboxAttribution from "@/features/riders/presentation/components/MapboxAttribution";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import { getPreviewStops } from "@/features/riders/presentation/utils/orderPreview";
 import { t, useT } from "@/lib/i18n";
@@ -154,6 +155,7 @@ export default function OrderPreviewSheet({
             extraStops={extraStops}
             isDarkMode={isDarkMode}
           />
+          <MapboxAttribution style={styles.mapCredit} />
           {routeState === "unavailable" && (
             <View style={[styles.mapNote, { top: insets.top + 64 }]}>
               <Text style={styles.mapNoteText}>
@@ -229,6 +231,8 @@ export default function OrderPreviewSheet({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FFFFFF" },
   map: { flex: 1 },
+  // Above the Leaflet tile credit line that phones without Google services show bottom right.
+  mapCredit: { position: "absolute", right: 8, bottom: 24 },
   closeButton: {
     position: "absolute",
     left: 16,

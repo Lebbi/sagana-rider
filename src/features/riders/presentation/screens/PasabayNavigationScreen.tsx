@@ -18,6 +18,7 @@
 import { scale, verticalScale } from "@/constants/DesignSystem";
 import { fontFamily } from "@/constants/FontTheme";
 import { IconTheme, MaterialIcons } from "@/constants/IconTheme";
+import MapboxAttribution from "@/features/riders/presentation/components/MapboxAttribution";
 import RiderNavigationWebView from "@/features/riders/presentation/components/RiderNavigationWebView";
 import StopProgressCard from "@/features/riders/presentation/components/StopProgressCard";
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
@@ -295,6 +296,7 @@ export default function PasabayNavigationScreen() {
 
           {/* Turn-by-turn overlay */}
           <View style={styles.turnByTurnOverlay}>
+            <MapboxAttribution style={styles.mapCredit} />
             <TurnByTurnCard
               currentStep={nav.currentStep}
               nextStep={nav.nextStep}
@@ -477,6 +479,10 @@ const styles = StyleSheet.create({
     left: scale(12),
     right: scale(12),
     zIndex: 10,
+  },
+  mapCredit: {
+    alignSelf: "flex-end",
+    marginBottom: scale(6),
   },
   bottomSheet: {
     maxHeight: 340,

@@ -114,6 +114,11 @@ export const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  mapCredit: {
+    position: "absolute",
+    top: 0,
+    right: 12,
+  },
   bottomSheet: {
     position: "absolute",
     top: 0,

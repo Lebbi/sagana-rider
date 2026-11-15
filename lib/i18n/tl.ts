@@ -472,4 +472,8 @@ export const tl: Translation = {
   "account.deletedToast": "Nabura na ang account mo",
   "account.loggedOutTitle": "Na-log out ka",
   "account.loggedOutBody": "Kung umiiral pa ang account mo, mag-log in at subukan ulit.",
+  "mapCredit.logo": "Mapbox",
+  "mapCredit.mapbox": "Kredito ng mapa ng Mapbox, bubuksan sa browser mo",
+  "mapCredit.osm": "Copyright ng OpenStreetMap, bubuksan sa browser mo",
+  "mapCredit.improve": "Pagandahin ang mapang ito, magpadala ng puna sa Mapbox sa browser mo",
 };

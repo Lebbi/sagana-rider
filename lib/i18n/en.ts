@@ -470,4 +470,8 @@ export const en = {
   "account.deletedToast": "Your account has been deleted",
   "account.loggedOutTitle": "You have been logged out",
   "account.loggedOutBody": "If your account still exists, log in and try again.",
+  "mapCredit.logo": "Mapbox",
+  "mapCredit.mapbox": "Mapbox map credits, opens in your browser",
+  "mapCredit.osm": "OpenStreetMap copyright, opens in your browser",
+  "mapCredit.improve": "Improve this map, send feedback to Mapbox in your browser",
 };

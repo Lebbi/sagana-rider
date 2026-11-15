@@ -29,6 +29,7 @@ import {
 } from "@/features/riders/presentation/utils/sheetStops";
 import ETABadge from "@/features/riders/presentation/components/ETABadge";
 import InAppCallModal from "@/features/riders/presentation/components/InAppCallModal";
+import MapboxAttribution from "@/features/riders/presentation/components/MapboxAttribution";
 import NativeMapView from "@/features/riders/presentation/components/NativeMapView";
 import TurnByTurnCard from "@/features/riders/presentation/components/TurnByTurnCard";
 import { useCameraHeading } from "@/features/riders/presentation/hooks/useCameraHeading";
@@ -66,6 +67,8 @@ function showSavedOfflineToast() {
 const DRAG_DISMISS_THRESHOLD = 64;
 const VOICE_MUTED_KEY = "sagana.voiceMuted";
 const PEEK_HEIGHT_GUESS = 260;
+// Mapbox credit height (about 44) plus a gap above the sheet.
+const CREDIT_LIFT = 52;
 
 const CANCEL_REASONS: { value: CancelReason; label: TextKey }[] = [
   { value: "vehicle_breakdown", label: "delivery.reasonBreakdown" },
@@ -361,6 +364,8 @@ export default function ActiveDeliveryPage() {
     sheetHeight - peekHeight,
   );
   const peekOffsetRef = useRef(peekOffset);
+  // Status strip + mapRightControls (top 92, two 70 buttons, gap 8) + 8.
+  const creditMinTop = insets.top + 256;
   peekOffsetRef.current = peekOffset;
 
   useEffect(() => {
@@ -963,6 +968,27 @@ export default function ActiveDeliveryPage() {
             </Pressable>
           </View>
         </View>
+
+        {/* Mapbox credit on the sheet's top edge; stops below the right-hand map buttons. */}
+        <Animated.View
+          pointerEvents="box-none"
+          style={[
+            styles.mapCredit,
+            {
+              transform: [
+                {
+                  translateY: translateY.interpolate({
+                    inputRange: [creditMinTop + CREDIT_LIFT, creditMinTop + CREDIT_LIFT + 1],
+                    outputRange: [creditMinTop, creditMinTop + 1],
+                    extrapolateLeft: "clamp",
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <MapboxAttribution />
+        </Animated.View>
 
         <Animated.View
           style={[
