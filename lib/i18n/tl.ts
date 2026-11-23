@@ -375,8 +375,7 @@ export const tl: Translation = {
   "login.hidePassword": "Itago ang password",
   "login.showPassword": "Ipakita ang password",
   "login.logIn": "Mag-log in",
-  "login.footer": "Sinusuri ng Sagana ang bawat rider application bago ka makapag-log in.",
-  "login.apply": "Mag-apply bilang rider ng Sagana",
+  "login.apply": "Hindi pa rider? Mag-apply dito.",
 
   "register.title": "Mag-apply bilang Rider",
   "register.subtitle": "Ikuwento ang tungkol sa iyo at sa sasakyan mo. Sinusuri ng Sagana ang bawat application.",

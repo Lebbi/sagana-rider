@@ -373,8 +373,7 @@ export const en = {
   "login.hidePassword": "Hide password",
   "login.showPassword": "Show password",
   "login.logIn": "Log in",
-  "login.footer": "Sagana reviews every rider application before you can log in.",
-  "login.apply": "Apply to ride with Sagana",
+  "login.apply": "Not a rider yet? Apply here.",
 
   "register.title": "Apply to Ride",
   "register.subtitle": "Tell us about you and your vehicle. Sagana reviews every application.",

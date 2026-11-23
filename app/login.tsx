@@ -266,10 +266,6 @@ export default function RiderLoginScreen() {
               >
                 <LoginText style={styles.applyLinkText}>{t("login.apply")}</LoginText>
               </SaganaPressable>
-
-              <LoginText style={styles.footerNote}>
-                {t("login.footer")}
-              </LoginText>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -374,21 +370,15 @@ const styles = StyleSheet.create({
   },
   applyLink: {
     alignItems: "center",
-    paddingVertical: 10,
-    marginBottom: 10,
+    justifyContent: "center",
+    minHeight: 44,
+    marginTop: 4,
   },
+  // Smaller than fields and buttons (owner RID-47); the 44 px row keeps it tappable.
   applyLinkText: {
-    fontFamily: manrope.bold,
-    fontSize: d.bodySize,
+    fontFamily: manrope.semiBold,
+    fontSize: 13,
     color: d.primary,
     textDecorationLine: "underline",
-  },
-  footerNote: {
-    fontFamily: manrope.regular,
-    fontSize: 13,
-    color: d.footerMuted,
-    textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 12,
   },
 });
