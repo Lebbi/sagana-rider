@@ -5,6 +5,7 @@ import { AppState } from "react-native";
 
 const mockGetRiderOrders = jest.fn(async () => [] as unknown[]);
 const mockGetRiderSettings = jest.fn(async () => ({ autoAccept: false, isOnline: true }));
+const mockAskRiderPermissions = jest.fn(async () => false);
 let mockLocation: { latitude: number; longitude: number } | null = null;
 let mockParams: { delivered?: string } = {};
 const mockRouter = { push: jest.fn(), setParams: jest.fn() };
@@ -68,6 +69,9 @@ jest.mock("@/lib/riderOrdersApi", () => ({
   getRiderOrders: () => mockGetRiderOrders(),
   acceptOrder: jest.fn(),
 }));
+jest.mock("@/lib/permissionAsk", () => ({
+  askRiderPermissions: () => mockAskRiderPermissions(),
+}));
 jest.mock("@/lib/riderSettingsApi", () => ({
   getRiderSettings: () => mockGetRiderSettings(),
   updateRiderSettings: jest.fn(),
@@ -112,6 +116,28 @@ describe("home screen order fetching", () => {
 
     expect(ordersAfter).toBe(ordersBefore);
     expect(settingsAfter).toBe(settingsBefore);
+  }, 20000);
+});
+
+describe("permission ask at Home load (RID-48)", () => {
+  beforeEach(() => {
+    mockAskRiderPermissions.mockClear();
+  });
+
+  it.each([
+    [true, 1],
+    [false, 0],
+  ])("rider restored On Duty = %s asks %i time(s)", async (isOnline, times) => {
+    mockGetRiderSettings.mockResolvedValueOnce({ autoAccept: false, isOnline });
+    let tree!: ReturnType<typeof create>;
+    await act(async () => {
+      tree = create(<HomeScreen />);
+    });
+    await flush();
+    await act(async () => {
+      tree.unmount();
+    });
+    expect(mockAskRiderPermissions).toHaveBeenCalledTimes(times);
   }, 20000);
 });
 

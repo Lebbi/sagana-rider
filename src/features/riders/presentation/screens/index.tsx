@@ -300,6 +300,12 @@ export default function DriverHomepageScreen() {
     }
   }, [fetchOrders, refreshLocation]);
 
+  // A ref so the settings effect below doesn't rerun when this changes identity.
+  const refreshLocationRef = useRef(refreshLocation);
+  useEffect(() => {
+    refreshLocationRef.current = refreshLocation;
+  }, [refreshLocation]);
+
   // Fetch rider settings on mount — sync into the shared context so the
   // auto-accept engine picks them up. Then fetch orders with correct isOnDuty.
   useEffect(() => {
@@ -310,6 +316,12 @@ export default function DriverHomepageScreen() {
         if (!mounted) return;
         setAutoAcceptEnabled(settings.autoAccept);
         setIsOnline(settings.isOnline);
+        // Already On Duty when the app opens: ask now, as switching On Duty would (RID-48).
+        if (settings.isOnline) {
+          void askRiderPermissions().then((allowed) => {
+            if (allowed && mounted) void refreshLocationRef.current();
+          });
+        }
         // Fetch orders AFTER settings are loaded so isOnDuty is correct for backend filtering
         await fetchOrders();
       } catch (e) {
