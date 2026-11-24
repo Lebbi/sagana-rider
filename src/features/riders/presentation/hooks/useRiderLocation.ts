@@ -9,7 +9,7 @@
 
 import * as Location from "expo-location";
 import { getCurrentPositionAsync, watchPositionAsync } from "@/lib/googleServices";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { GeoPoint } from "@/types/maps";
 
 export interface UseRiderLocationReturn {
@@ -32,9 +32,11 @@ export function useRiderLocation(): UseRiderLocationReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Only reads the permission: the rider is asked when going On Duty or
+  // accepting an order (RID-48), never when Home opens.
   const requestPermission = useCallback(async (): Promise<boolean> => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
+      const { status } = await Location.getForegroundPermissionsAsync();
       const granted = status === "granted";
       setPermissionGranted(granted);
       if (!granted) {
@@ -50,9 +52,47 @@ export function useRiderLocation(): UseRiderLocationReturn {
     }
   }, []);
 
+  // A continuous watch keeps the coordinate current as the rider moves. It
+  // starts on the first fetch with permission, so a refresh after a late
+  // grant starts it too. Refs let an unmount racing the async start still
+  // tear the subscription down and never set state after unmount.
+  const mountedRef = useRef(true);
+  const watchRef = useRef<Location.LocationSubscription | null>(null);
+  const watchStartingRef = useRef(false);
+
+  const startWatch = useCallback(async () => {
+    if (watchRef.current || watchStartingRef.current) return;
+    watchStartingRef.current = true;
+    try {
+      const sub = await watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 5 },
+        (pos) => {
+          if (!mountedRef.current) return;
+          setLocation({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          });
+          setAccuracy(pos.coords.accuracy ?? null);
+        },
+      );
+      if (mountedRef.current) watchRef.current = sub;
+      else sub.remove();
+    } catch (e) {
+      if (__DEV__) {
+        console.error("[useRiderLocation] Watch error:", e);
+      }
+      if (mountedRef.current) {
+        setError("Failed to track location");
+      }
+    } finally {
+      watchStartingRef.current = false;
+    }
+  }, []);
+
   const fetchLocation = useCallback(async (): Promise<GeoPoint | null> => {
     const granted = await requestPermission();
     if (!granted) return null;
+    void startWatch();
 
     setIsLoading(true);
     setError(null);
@@ -79,52 +119,18 @@ export function useRiderLocation(): UseRiderLocationReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [requestPermission]);
+  }, [requestPermission, startWatch]);
 
-  // One-shot fetch for a fast first fix, then a continuous watch that keeps
-  // the coordinate current as the rider moves. The watch is started inside
-  // the effect with a `cancelled` flag and a closure-local subscription so
-  // that an unmount racing the async permission/watch resolves still tears
-  // the subscription down and never calls setState after unmount.
+  // One-shot fetch for a fast first fix; it also starts the watch.
   useEffect(() => {
-    let cancelled = false;
-    let sub: Location.LocationSubscription | null = null;
-
+    mountedRef.current = true;
     fetchLocation();
-
-    (async () => {
-      const granted = await requestPermission();
-      if (cancelled || !granted) return;
-      try {
-        sub = await watchPositionAsync(
-          { accuracy: Location.Accuracy.High, timeInterval: 3000, distanceInterval: 5 },
-          (pos) => {
-            if (cancelled) return;
-            setLocation({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-            });
-            setAccuracy(pos.coords.accuracy ?? null);
-          },
-        );
-        if (cancelled) {
-          sub.remove();
-        }
-      } catch (e) {
-        if (__DEV__) {
-          console.error("[useRiderLocation] Watch error:", e);
-        }
-        if (!cancelled) {
-          setError("Failed to track location");
-        }
-      }
-    })();
-
     return () => {
-      cancelled = true;
-      sub?.remove();
+      mountedRef.current = false;
+      watchRef.current?.remove();
+      watchRef.current = null;
     };
-  }, [fetchLocation, requestPermission]);
+  }, [fetchLocation]);
 
   return {
     location,

@@ -40,13 +40,35 @@ export function configureNotifications() {
   });
 }
 
-/** Failures stay silent: a phone without push must still use the app normally. */
-export async function registerPush(): Promise<void> {
+// Set after the server has this phone's token, so a late grant in Settings registers again.
+let registeredThisSession = false;
+
+export type NotificationPermission = { granted: boolean; canAskAgain: boolean };
+
+/** Reads the permission without ever showing the system prompt. */
+export async function getNotificationPermission(): Promise<NotificationPermission> {
+  const N = getNotifications();
+  if (!N) return { granted: false, canAskAgain: false };
+  const { status, canAskAgain } = await N.getPermissionsAsync();
+  return { granted: status === "granted", canAskAgain: canAskAgain !== false };
+}
+
+/**
+ * Saves this phone's push token on the server when notifications are allowed.
+ * Shows the system prompt only with `ask` (after the explanation, RID-48).
+ * Failures stay silent: a phone without push must still use the app normally.
+ * Returns true once the server has the token.
+ */
+export async function registerPush(ask = false): Promise<boolean> {
   try {
     const N = getNotifications();
-    if (!N) return;
+    if (!N) return false;
 
-    // Android 13 only shows the permission prompt once a channel exists.
+    const { status: existing } = await N.getPermissionsAsync();
+    if (existing !== "granted" && !ask) return false;
+
+    // Android 13 shows the permission prompt as soon as a channel exists, so
+    // the channel is only made once allowed or right before we ask.
     if (Platform.OS === "android") {
       await N.setNotificationChannelAsync("default", {
         name: "Order alerts",
@@ -56,12 +78,11 @@ export async function registerPush(): Promise<void> {
       });
     }
 
-    const { status: existing } = await N.getPermissionsAsync();
     const { status } =
       existing === "granted"
         ? { status: existing }
         : await N.requestPermissionsAsync();
-    if (status !== "granted") return;
+    if (status !== "granted") return false;
 
     const { data: token } = await N.getExpoPushTokenAsync({
       projectId: Constants.expoConfig?.extra?.eas?.projectId,
@@ -72,14 +93,23 @@ export async function registerPush(): Promise<void> {
       app: "rider",
       platform: Platform.OS,
     });
+    registeredThisSession = true;
+    return true;
   } catch {
     // Permission, token and network failures all mean no push this session.
+    return false;
   }
+}
+
+/** For app resume: registers only if this session hasn't yet, e.g. after a grant in Settings. */
+export async function registerPushIfNew(): Promise<void> {
+  if (!registeredThisSession) await registerPush();
 }
 
 /** Call before /logout revokes the auth token, because the delete needs it. */
 export async function unregisterPush(): Promise<void> {
   try {
+    registeredThisSession = false;
     const token = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
     if (!token) return;
     await AsyncStorage.removeItem(PUSH_TOKEN_KEY);

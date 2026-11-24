@@ -28,6 +28,7 @@ import { t, useT } from "@/lib/i18n";
 import { homeAvailableEmptyState } from "@/lib/riderEmptyStates";
 import { DEFAULT_MAP_CENTER } from "@/lib/mapTiles";
 import { acceptOrder, getRiderOrders } from "@/lib/riderOrdersApi";
+import { askRiderPermissions } from "@/lib/permissionAsk";
 import { getRiderSettings, updateRiderSettings } from "@/lib/riderSettingsApi";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { GeoPoint, RiderOrder } from "@/types/maps";
@@ -365,6 +366,8 @@ export default function DriverHomepageScreen() {
         setPreviewOrderId(null);
         handleApiSuccess(t("status.accepted"), t("orderDetails.acceptedBody"));
         await fetchOrders();
+        // Asked after the accept so the order is already this rider's (RID-48).
+        await askRiderPermissions();
         // Navigate to Active Delivery immediately so the rider sees the
         // order details instead of having to tap the Active card manually.
         router.push({
@@ -413,6 +416,12 @@ export default function DriverHomepageScreen() {
   const handleToggleDuty = useCallback(
     async (value: boolean) => {
       setIsOnline(value);
+      // Going On Duty is when push and GPS start to matter (RID-48).
+      if (value) {
+        void askRiderPermissions().then((allowed) => {
+          if (allowed) void refreshLocation();
+        });
+      }
       try {
         await updateRiderSettings({ isOnline: value });
         // Refetch orders when duty status changes - backend may show/hide searching orders
@@ -424,7 +433,7 @@ export default function DriverHomepageScreen() {
         setIsOnline(!value);
       }
     },
-    [setIsOnline, fetchOrders],
+    [setIsOnline, fetchOrders, refreshLocation],
   );
 
   // Destination for the mini-map — from the active order, or null when idle.

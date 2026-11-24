@@ -62,13 +62,27 @@ describe("registerPush", () => {
     mockNotifications.requestPermissionsAsync.mockResolvedValue({
       status: "denied",
     });
-    await registerPush();
+    await registerPush(true);
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("never prompts or creates a channel unless asked", async () => {
+    mockNotifications.getPermissionsAsync.mockResolvedValue({ status: "undetermined" });
+    expect(await registerPush()).toBe(false);
+    expect(mockNotifications.requestPermissionsAsync).not.toHaveBeenCalled();
+    expect(mockNotifications.setNotificationChannelAsync).not.toHaveBeenCalled();
+  });
+
+  it("prompts when asked after the explanation", async () => {
+    mockNotifications.getPermissionsAsync.mockResolvedValue({ status: "undetermined" });
+    mockNotifications.requestPermissionsAsync.mockResolvedValue({ status: "granted" });
+    expect(await registerPush(true)).toBe(true);
+    expect(api.post).toHaveBeenCalled();
   });
 
   it("swallows a failed token fetch", async () => {
     mockNotifications.getExpoPushTokenAsync.mockRejectedValue(new Error("no"));
-    await expect(registerPush()).resolves.toBeUndefined();
+    await expect(registerPush()).resolves.toBe(false);
   });
 });
 

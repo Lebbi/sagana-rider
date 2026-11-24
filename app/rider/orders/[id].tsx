@@ -17,6 +17,7 @@ import { fontFamily } from "@/constants/FontTheme";
 import { t, useT } from "@/lib/i18n";
 import { getRiderOrderById } from "@/lib/riderOrdersApi";
 import { acceptOrder } from "@/lib/riderOrdersApi";
+import { askRiderPermissions } from "@/lib/permissionAsk";
 import { handleApiError, handleApiSuccess } from "@/utils/errorHandler";
 import type { RiderOrder } from "@/types/maps";
 import {
@@ -117,6 +118,8 @@ export default function RiderOrderDetailScreen() {
     try {
       await acceptOrder(orderId);
       handleApiSuccess(t("status.accepted"), t("orderDetails.acceptedBody"));
+      // Asked after the accept so the order is already this rider's (RID-48).
+      await askRiderPermissions();
       router.replace({
         pathname: "/tabs/ActiveDeliveryPage",
         params: { orderId: String(orderId) },
