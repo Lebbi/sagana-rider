@@ -10,6 +10,7 @@
 import * as Location from "expo-location";
 import { getCurrentPositionAsync, watchPositionAsync } from "@/lib/googleServices";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 import type { GeoPoint } from "@/types/maps";
 
 export interface UseRiderLocationReturn {
@@ -130,6 +131,14 @@ export function useRiderLocation(): UseRiderLocationReturn {
       watchRef.current?.remove();
       watchRef.current = null;
     };
+  }, [fetchLocation]);
+
+  // Back from phone Settings after a late grant: start GPS without a prompt.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && !watchRef.current) void fetchLocation();
+    });
+    return () => sub.remove();
   }, [fetchLocation]);
 
   return {
